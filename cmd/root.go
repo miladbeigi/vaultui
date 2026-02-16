@@ -1,0 +1,85 @@
+package cmd
+
+import (
+	"fmt"
+	"os"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/milad/vaultui/internal/app"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+)
+
+var (
+	cfgFile   string
+	vaultAddr string
+	token     string
+	namespace string
+)
+
+var rootCmd = &cobra.Command{
+	Use:   "vaultui",
+	Short: "A k9s-inspired TUI for HashiCorp Vault",
+	Long: `VaultUI is a keyboard-driven terminal UI for browsing, inspecting,
+and managing HashiCorp Vault. Navigate secrets, policies, auth methods,
+and leases — all without leaving the terminal.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		cfg := app.Config{
+			VaultAddr: viper.GetString("vault.address"),
+			Token:     viper.GetString("vault.token"),
+			Namespace: viper.GetString("vault.namespace"),
+		}
+
+		model := app.New(cfg)
+		p := tea.NewProgram(model, tea.WithAltScreen())
+		if _, err := p.Run(); err != nil {
+			return fmt.Errorf("failed to run vaultui: %w", err)
+		}
+		return nil
+	},
+}
+
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func init() {
+	cobra.OnInitialize(initConfig)
+
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default $HOME/.vaultui.yaml)")
+	rootCmd.PersistentFlags().StringVar(&vaultAddr, "vault-addr", "", "Vault server address")
+	rootCmd.PersistentFlags().StringVar(&token, "token", "", "Vault authentication token")
+	rootCmd.PersistentFlags().StringVar(&namespace, "namespace", "", "Vault namespace")
+
+	_ = viper.BindPFlag("vault.address", rootCmd.PersistentFlags().Lookup("vault-addr"))
+	_ = viper.BindPFlag("vault.token", rootCmd.PersistentFlags().Lookup("token"))
+	_ = viper.BindPFlag("vault.namespace", rootCmd.PersistentFlags().Lookup("namespace"))
+}
+
+func initConfig() {
+	if cfgFile != "" {
+		viper.SetConfigFile(cfgFile)
+	} else {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		viper.AddConfigPath(home)
+		viper.SetConfigName(".vaultui")
+		viper.SetConfigType("yaml")
+	}
+
+	// Environment variable overrides
+	viper.SetEnvPrefix("")
+	viper.BindEnv("vault.address", "VAULT_ADDR")
+	viper.BindEnv("vault.token", "VAULT_TOKEN")
+	viper.BindEnv("vault.namespace", "VAULT_NAMESPACE")
+
+	viper.AutomaticEnv()
+
+	// Read config file (silently ignore if not found)
+	_ = viper.ReadInConfig()
+}
