@@ -74,6 +74,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.router.Pop() {
 				return m, nil
 			}
+		case key.Matches(msg, keys.Jump1):
+			cmd := m.router.Push(views.NewEnginesView(m.client))
+			return m, cmd
 		}
 	}
 

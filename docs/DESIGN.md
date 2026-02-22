@@ -564,11 +564,11 @@ keys:
 - [x] Project scaffolding (Go modules, Cobra CLI, Bubble Tea shell)
 - [x] Vault client wrapper with token auth
 - [x] Connection header bar (address, namespace, seal status)
-- [ ] Bottom status bar with contextual keybinding hints
+- [x] Bottom status bar with contextual keybinding hints
 - [ ] Secret Engines list view
 - [ ] Path Browser for KV v2 (list directories + secrets)
 - [ ] Secret Detail View (masked values, reveal, copy)
-- [ ] Navigation stack (push/pop)
+- [x] Navigation stack (push/pop)
 - [ ] Global keybindings (`:`, `/`, `?`, `q`, vim nav)
 - [ ] Command palette (`:secrets`, `:dash`, `:q`)
 - [ ] Fuzzy filter on table views
