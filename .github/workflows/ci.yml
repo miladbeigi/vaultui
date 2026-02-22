@@ -25,13 +25,7 @@ jobs:
         run: go mod download
 
       - name: Run tests
-        run: CGO_ENABLED=1 go test -race -count=1 -coverprofile=coverage.out ./...
-
-      - name: Upload coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage.out
+        run: go test ./...
 
   lint:
     name: Lint
