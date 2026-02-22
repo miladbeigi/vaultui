@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/milad/vaultui/internal/app"
+	"github.com/milad/vaultui/internal/vault"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -24,13 +25,16 @@ var rootCmd = &cobra.Command{
 and managing HashiCorp Vault. Navigate secrets, policies, auth methods,
 and leases — all without leaving the terminal.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := app.Config{
-			VaultAddr: viper.GetString("vault.address"),
+		vc, err := vault.NewClient(vault.ClientConfig{
+			Address:   viper.GetString("vault.address"),
 			Token:     viper.GetString("vault.token"),
 			Namespace: viper.GetString("vault.namespace"),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create vault client: %w", err)
 		}
 
-		model := app.New(cfg)
+		model := app.New(vc)
 		p := tea.NewProgram(model, tea.WithAltScreen())
 		if _, err := p.Run(); err != nil {
 			return fmt.Errorf("failed to run vaultui: %w", err)

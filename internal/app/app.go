@@ -5,28 +5,22 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/milad/vaultui/internal/ui/styles"
+	"github.com/milad/vaultui/internal/vault"
 )
-
-// Config holds the resolved configuration passed from the CLI layer.
-type Config struct {
-	VaultAddr string
-	Token     string
-	Namespace string
-}
 
 // Model is the top-level Bubble Tea model for the application.
 type Model struct {
-	config Config
-	width  int
-	height int
-	ready  bool
+	client   *vault.Client
+	width    int
+	height   int
+	ready    bool
 	quitting bool
 }
 
-// New creates the initial application model from the given config.
-func New(cfg Config) Model {
+// New creates the initial application model with the given Vault client.
+func New(client *vault.Client) Model {
 	return Model{
-		config: cfg,
+		client: client,
 	}
 }
 
@@ -73,11 +67,11 @@ func (m Model) View() string {
 }
 
 func (m Model) renderHeader() string {
-	addr := m.config.VaultAddr
+	addr := m.client.Address()
 	if addr == "" {
 		addr = "not configured"
 	}
-	ns := m.config.Namespace
+	ns := m.client.Namespace()
 	if ns == "" {
 		ns = "root"
 	}
