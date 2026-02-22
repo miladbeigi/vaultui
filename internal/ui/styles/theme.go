@@ -29,6 +29,14 @@ var TitleStyle = lipgloss.NewStyle().
 	Bold(true).
 	Padding(0, 1)
 
+// HeaderLabelStyle renders labels/separators in the header bar.
+var HeaderLabelStyle = lipgloss.NewStyle().
+	Foreground(DimTextColor)
+
+// HeaderValueStyle renders values in the header bar.
+var HeaderValueStyle = lipgloss.NewStyle().
+	Foreground(TextColor)
+
 // SubtleStyle is for secondary/dimmed text.
 var SubtleStyle = lipgloss.NewStyle().
 	Foreground(DimTextColor)

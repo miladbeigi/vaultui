@@ -1,6 +1,8 @@
 package app
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -8,9 +10,16 @@ import (
 	"github.com/milad/vaultui/internal/vault"
 )
 
+type healthMsg struct {
+	status *vault.HealthStatus
+	err    error
+}
+
 // Model is the top-level Bubble Tea model for the application.
 type Model struct {
 	client   *vault.Client
+	health   *vault.HealthStatus
+	healthErr error
 	width    int
 	height   int
 	ready    bool
@@ -25,7 +34,12 @@ func New(client *vault.Client) Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return nil
+	return m.fetchHealth
+}
+
+func (m Model) fetchHealth() tea.Msg {
+	status, err := m.client.Health()
+	return healthMsg{status: status, err: err}
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -34,6 +48,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.ready = true
+		return m, nil
+
+	case healthMsg:
+		m.health = msg.status
+		m.healthErr = msg.err
 		return m, nil
 
 	case tea.KeyMsg:
@@ -77,22 +96,80 @@ func (m Model) renderHeader() string {
 	}
 
 	title := styles.TitleStyle.Render(" VaultUI ")
-	conn := styles.SubtleStyle.Render(" ◆ " + addr + "  ◆  ns: " + ns)
 
-	headerContent := lipgloss.JoinHorizontal(lipgloss.Center, title, conn)
-	return styles.HeaderStyle.Width(m.width).Render(headerContent)
+	addrPart := styles.HeaderLabelStyle.Render(" ◆ ") + styles.HeaderValueStyle.Render(addr)
+	nsPart := styles.HeaderLabelStyle.Render("  ns: ") + styles.HeaderValueStyle.Render(ns)
+
+	var statusPart string
+	if m.healthErr != nil {
+		statusPart = styles.HeaderLabelStyle.Render("  ◆  ") +
+			styles.ErrorStyle.Render("disconnected")
+	} else if m.health != nil {
+		statusPart = styles.HeaderLabelStyle.Render("  ◆  ") + m.renderSealStatus()
+	} else {
+		statusPart = styles.HeaderLabelStyle.Render("  ◆  ") +
+			styles.SubtleStyle.Render("connecting...")
+	}
+
+	left := lipgloss.JoinHorizontal(lipgloss.Center, title, addrPart, nsPart, statusPart)
+
+	var right string
+	if m.health != nil {
+		right = m.renderHealthInfo()
+	}
+
+	gap := m.width - lipgloss.Width(left) - lipgloss.Width(right) - 2
+	if gap < 1 {
+		gap = 1
+	}
+	spacer := lipgloss.NewStyle().Width(gap).Render("")
+
+	headerRow := lipgloss.JoinHorizontal(lipgloss.Center, left, spacer, right)
+	return styles.HeaderStyle.Width(m.width).Render(headerRow)
+}
+
+func (m Model) renderSealStatus() string {
+	if m.health.Sealed {
+		return styles.ErrorStyle.Render("sealed")
+	}
+	return styles.SuccessStyle.Render("unsealed")
+}
+
+func (m Model) renderHealthInfo() string {
+	h := m.health
+	version := styles.HeaderLabelStyle.Render("v") + styles.HeaderValueStyle.Render(h.Version)
+
+	var haMode string
+	if h.Standby {
+		haMode = styles.HeaderValueStyle.Render("standby")
+	} else if h.ClusterID != "" {
+		haMode = styles.HeaderValueStyle.Render("active")
+	}
+
+	parts := version
+	if haMode != "" {
+		parts += styles.HeaderLabelStyle.Render("  ha: ") + haMode
+	}
+	if h.ClusterName != "" {
+		parts += styles.HeaderLabelStyle.Render("  cluster: ") + styles.HeaderValueStyle.Render(h.ClusterName)
+	}
+
+	return parts
 }
 
 func (m Model) renderBody() string {
-	bodyHeight := m.height - 4 // account for header + status bar
+	bodyHeight := m.height - 4
 
-	content := lipgloss.Place(
-		m.width, bodyHeight,
-		lipgloss.Center, lipgloss.Center,
-		styles.SubtleStyle.Render("Welcome to VaultUI\n\nPress : for commands, ? for help, q to quit"),
-	)
+	var msg string
+	if m.healthErr != nil {
+		msg = styles.ErrorStyle.Render("Could not connect to Vault") + "\n\n" +
+			styles.SubtleStyle.Render(fmt.Sprintf("%v", m.healthErr)) + "\n\n" +
+			styles.SubtleStyle.Render("Check VAULT_ADDR and VAULT_TOKEN, then press q to quit")
+	} else {
+		msg = styles.SubtleStyle.Render("Welcome to VaultUI\n\nPress : for commands, ? for help, q to quit")
+	}
 
-	return content
+	return lipgloss.Place(m.width, bodyHeight, lipgloss.Center, lipgloss.Center, msg)
 }
 
 func (m Model) renderStatusBar() string {
