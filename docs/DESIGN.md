@@ -561,9 +561,9 @@ keys:
 ### Phase 1 — Foundation (MVP)
 > **Goal:** Connect to Vault and browse KV secrets.
 
-- [ ] Project scaffolding (Go modules, Cobra CLI, Bubble Tea shell)
-- [ ] Vault client wrapper with token auth
-- [ ] Connection header bar (address, namespace, seal status)
+- [x] Project scaffolding (Go modules, Cobra CLI, Bubble Tea shell)
+- [x] Vault client wrapper with token auth
+- [x] Connection header bar (address, namespace, seal status)
 - [ ] Bottom status bar with contextual keybinding hints
 - [ ] Secret Engines list view
 - [ ] Path Browser for KV v2 (list directories + secrets)
