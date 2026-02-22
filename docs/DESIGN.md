@@ -565,13 +565,15 @@ keys:
 - [x] Vault client wrapper with token auth
 - [x] Connection header bar (address, namespace, seal status)
 - [x] Bottom status bar with contextual keybinding hints
-- [ ] Secret Engines list view
+- [x] Secret Engines list view
 - [ ] Path Browser for KV v2 (list directories + secrets)
 - [ ] Secret Detail View (masked values, reveal, copy)
 - [x] Navigation stack (push/pop)
 - [ ] Global keybindings (`:`, `/`, `?`, `q`, vim nav)
 - [ ] Command palette (`:secrets`, `:dash`, `:q`)
 - [ ] Fuzzy filter on table views
+- [ ] Fix layout: sticky header/status bar with fixed body region (three-part layout)
+- [ ] Fix table: columns should fill available width, proper frame/borders
 
 ### Phase 2 — Broader Vault Coverage
 > **Goal:** Cover the main Vault resource types.

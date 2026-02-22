@@ -20,7 +20,10 @@ var (
 var HeaderStyle = lipgloss.NewStyle().
 	Background(HeaderBgColor).
 	Foreground(TextColor).
-	Padding(0, 1)
+	Padding(0, 1).
+	BorderStyle(lipgloss.NormalBorder()).
+	BorderBottom(true).
+	BorderForeground(SubtleColor)
 
 // TitleStyle renders the app name badge.
 var TitleStyle = lipgloss.NewStyle().
@@ -45,7 +48,10 @@ var SubtleStyle = lipgloss.NewStyle().
 var StatusBarStyle = lipgloss.NewStyle().
 	Background(StatusBgColor).
 	Foreground(TextColor).
-	Padding(0, 1)
+	Padding(0, 1).
+	BorderStyle(lipgloss.NormalBorder()).
+	BorderTop(true).
+	BorderForeground(SubtleColor)
 
 // HintKeyStyle renders keybinding keys in the status bar.
 var HintKeyStyle = lipgloss.NewStyle().

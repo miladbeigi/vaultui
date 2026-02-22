@@ -89,6 +89,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+const headerHeight = 2    // 1 content + 1 bottom border
+const statusBarHeight = 2 // 1 content + 1 top border
+
+func (m Model) bodyHeight() int {
+	h := m.height - headerHeight - statusBarHeight
+	if h < 1 {
+		return 1
+	}
+	return h
+}
+
 func (m Model) View() string {
 	if !m.ready {
 		return "Initializing..."
@@ -99,7 +110,10 @@ func (m Model) View() string {
 	}
 
 	header := m.renderHeader()
-	body := m.renderBody()
+	body := lipgloss.NewStyle().
+		Width(m.width).
+		Height(m.bodyHeight()).
+		Render(m.renderBody())
 	statusBar := m.renderStatusBar()
 
 	return lipgloss.JoinVertical(lipgloss.Left, header, body, statusBar)
@@ -179,17 +193,17 @@ func (m Model) renderHealthInfo() string {
 }
 
 func (m Model) renderBody() string {
-	bodyHeight := m.height - 4
+	bh := m.bodyHeight()
 
 	if m.healthErr != nil {
 		msg := styles.ErrorStyle.Render("Could not connect to Vault") + "\n\n" +
 			styles.SubtleStyle.Render(fmt.Sprintf("%v", m.healthErr)) + "\n\n" +
 			styles.SubtleStyle.Render("Check VAULT_ADDR and VAULT_TOKEN, then press q to quit")
-		return lipgloss.Place(m.width, bodyHeight, lipgloss.Center, lipgloss.Center, msg)
+		return lipgloss.Place(m.width, bh, lipgloss.Center, lipgloss.Center, msg)
 	}
 
 	if current := m.router.Current(); current != nil {
-		return current.View(m.width, bodyHeight)
+		return current.View(m.width, bh)
 	}
 
 	return ""

@@ -8,10 +8,12 @@ import (
 	"github.com/milad/vaultui/internal/ui/styles"
 )
 
-// Column defines a table column with a header and fixed width.
+// Column defines a table column with a header and minimum width.
+// The last column automatically expands to fill remaining space.
 type Column struct {
-	Title string
-	Width int
+	Title    string
+	MinWidth int
+	FlexFill bool
 }
 
 // Row is a slice of cell values corresponding to the columns.
@@ -127,14 +129,44 @@ func (t *Table) visibleRows() int {
 	return h
 }
 
+// resolvedWidths calculates actual column widths, expanding flex columns
+// to fill the available table width.
+func (t *Table) resolvedWidths() []int {
+	widths := make([]int, len(t.columns))
+	fixedTotal := 0
+	flexCount := 0
+
+	for i, col := range t.columns {
+		widths[i] = col.MinWidth
+		if col.FlexFill {
+			flexCount++
+		} else {
+			fixedTotal += col.MinWidth
+		}
+	}
+
+	if flexCount > 0 && t.width > fixedTotal {
+		remaining := t.width - fixedTotal
+		perFlex := remaining / flexCount
+		for i, col := range t.columns {
+			if col.FlexFill {
+				widths[i] = max(col.MinWidth, perFlex)
+			}
+		}
+	}
+
+	return widths
+}
+
 // View renders the table.
 func (t *Table) View() string {
 	var b strings.Builder
+	widths := t.resolvedWidths()
 
 	// Header
 	var headerCells []string
-	for _, col := range t.columns {
-		cell := styles.TableHeaderStyle.Width(col.Width).Render(col.Title)
+	for i, col := range t.columns {
+		cell := styles.TableHeaderStyle.Width(widths[i]).Render(col.Title)
 		headerCells = append(headerCells, cell)
 	}
 	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, headerCells...))
@@ -147,16 +179,17 @@ func (t *Table) View() string {
 	for i := t.offset; i < end; i++ {
 		row := t.rows[i]
 		var cells []string
-		for j, col := range t.columns {
+		for j := range t.columns {
 			val := ""
 			if j < len(row) {
 				val = row[j]
 			}
-			style := lipgloss.NewStyle().Width(col.Width)
+			w := widths[j]
+			style := lipgloss.NewStyle().Width(w)
 			if i == t.cursor {
-				style = styles.SelectedRowStyle.Width(col.Width)
+				style = styles.SelectedRowStyle.Width(w)
 			}
-			cells = append(cells, style.Render(truncate(val, col.Width)))
+			cells = append(cells, style.Render(truncate(val, w)))
 		}
 		b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, cells...))
 		if i < end-1 {

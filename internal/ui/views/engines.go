@@ -28,10 +28,10 @@ type EnginesView struct {
 var _ ui.View = (*EnginesView)(nil)
 
 var engineColumns = []components.Column{
-	{Title: "PATH", Width: 20},
-	{Title: "TYPE", Width: 14},
-	{Title: "VERSION", Width: 10},
-	{Title: "DESCRIPTION", Width: 40},
+	{Title: "PATH", MinWidth: 20},
+	{Title: "TYPE", MinWidth: 14},
+	{Title: "VERSION", MinWidth: 10},
+	{Title: "DESCRIPTION", MinWidth: 30, FlexFill: true},
 }
 
 // NewEnginesView creates a new secret engines browser.

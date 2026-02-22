@@ -7,8 +7,8 @@ import (
 
 func testColumns() []Column {
 	return []Column{
-		{Title: "NAME", Width: 10},
-		{Title: "TYPE", Width: 10},
+		{Title: "NAME", MinWidth: 10},
+		{Title: "TYPE", MinWidth: 10, FlexFill: true},
 	}
 }
 
