@@ -25,7 +25,7 @@ jobs:
         run: go mod download
 
       - name: Run tests
-        run: go test -race -count=1 -coverprofile=coverage.out ./...
+        run: CGO_ENABLED=1 go test -race -count=1 -coverprofile=coverage.out ./...
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
