@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
 	"github.com/milad/vaultui/internal/ui/styles"
 	"github.com/milad/vaultui/internal/vault"
 )
@@ -17,13 +18,13 @@ type healthMsg struct {
 
 // Model is the top-level Bubble Tea model for the application.
 type Model struct {
-	client   *vault.Client
-	health   *vault.HealthStatus
+	client    *vault.Client
+	health    *vault.HealthStatus
 	healthErr error
-	width    int
-	height   int
-	ready    bool
-	quitting bool
+	width     int
+	height    int
+	ready     bool
+	quitting  bool
 }
 
 // New creates the initial application model with the given Vault client.
@@ -101,12 +102,13 @@ func (m Model) renderHeader() string {
 	nsPart := styles.HeaderLabelStyle.Render("  ns: ") + styles.HeaderValueStyle.Render(ns)
 
 	var statusPart string
-	if m.healthErr != nil {
+	switch {
+	case m.healthErr != nil:
 		statusPart = styles.HeaderLabelStyle.Render("  ◆  ") +
 			styles.ErrorStyle.Render("disconnected")
-	} else if m.health != nil {
+	case m.health != nil:
 		statusPart = styles.HeaderLabelStyle.Render("  ◆  ") + m.renderSealStatus()
-	} else {
+	default:
 		statusPart = styles.HeaderLabelStyle.Render("  ◆  ") +
 			styles.SubtleStyle.Render("connecting...")
 	}

@@ -5,10 +5,11 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/milad/vaultui/internal/app"
-	"github.com/milad/vaultui/internal/vault"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/milad/vaultui/internal/app"
+	"github.com/milad/vaultui/internal/vault"
 )
 
 var (
@@ -78,9 +79,9 @@ func initConfig() {
 
 	// Environment variable overrides
 	viper.SetEnvPrefix("")
-	viper.BindEnv("vault.address", "VAULT_ADDR")
-	viper.BindEnv("vault.token", "VAULT_TOKEN")
-	viper.BindEnv("vault.namespace", "VAULT_NAMESPACE")
+	_ = viper.BindEnv("vault.address", "VAULT_ADDR")
+	_ = viper.BindEnv("vault.token", "VAULT_TOKEN")
+	_ = viper.BindEnv("vault.namespace", "VAULT_NAMESPACE")
 
 	viper.AutomaticEnv()
 
