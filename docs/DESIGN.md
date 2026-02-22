@@ -572,8 +572,8 @@ keys:
 - [ ] Global keybindings (`:`, `/`, `?`, `q`, vim nav)
 - [ ] Command palette (`:secrets`, `:dash`, `:q`)
 - [ ] Fuzzy filter on table views
-- [ ] Fix layout: sticky header/status bar with fixed body region (three-part layout)
-- [ ] Fix table: columns should fill available width, proper frame/borders
+- [x] Fix layout: sticky header/status bar with fixed body region (three-part layout)
+- [x] Fix table: columns should fill available width, proper frame/borders
 
 ### Phase 2 — Broader Vault Coverage
 > **Goal:** Cover the main Vault resource types.
