@@ -12,11 +12,9 @@ permissions:
 jobs:
   test:
     name: Test
-    runs-on:
-      - arc-runner-set
+    runs-on: arc-runner-set
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -29,7 +27,7 @@ jobs:
 
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     steps:
       - uses: actions/checkout@v4
 
@@ -45,10 +43,9 @@ jobs:
 
   vet:
     name: Vet
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -58,10 +55,9 @@ jobs:
 
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -71,10 +67,9 @@ jobs:
 
   tidy:
     name: Module tidy check
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
