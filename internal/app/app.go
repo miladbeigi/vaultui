@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/milad/vaultui/internal/ui/styles"
+	"github.com/milad/vaultui/internal/ui/views"
 	"github.com/milad/vaultui/internal/vault"
 )
 
@@ -19,6 +20,7 @@ type healthMsg struct {
 // Model is the top-level Bubble Tea model for the application.
 type Model struct {
 	client    *vault.Client
+	router    *Router
 	health    *vault.HealthStatus
 	healthErr error
 	width     int
@@ -29,8 +31,12 @@ type Model struct {
 
 // New creates the initial application model with the given Vault client.
 func New(client *vault.Client) Model {
+	router := NewRouter()
+	router.Push(views.NewHomeView())
+
 	return Model{
 		client: client,
+		router: router,
 	}
 }
 
@@ -64,7 +70,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.ForceQuit):
 			m.quitting = true
 			return m, tea.Quit
+		case key.Matches(msg, keys.Back):
+			if m.router.Pop() {
+				return m, nil
+			}
 		}
+	}
+
+	if current := m.router.Current(); current != nil {
+		updated, cmd := current.Update(msg)
+		m.router.Replace(updated)
+		return m, cmd
 	}
 
 	return m, nil
@@ -162,23 +178,31 @@ func (m Model) renderHealthInfo() string {
 func (m Model) renderBody() string {
 	bodyHeight := m.height - 4
 
-	var msg string
 	if m.healthErr != nil {
-		msg = styles.ErrorStyle.Render("Could not connect to Vault") + "\n\n" +
+		msg := styles.ErrorStyle.Render("Could not connect to Vault") + "\n\n" +
 			styles.SubtleStyle.Render(fmt.Sprintf("%v", m.healthErr)) + "\n\n" +
 			styles.SubtleStyle.Render("Check VAULT_ADDR and VAULT_TOKEN, then press q to quit")
-	} else {
-		msg = styles.SubtleStyle.Render("Welcome to VaultUI\n\nPress : for commands, ? for help, q to quit")
+		return lipgloss.Place(m.width, bodyHeight, lipgloss.Center, lipgloss.Center, msg)
 	}
 
-	return lipgloss.Place(m.width, bodyHeight, lipgloss.Center, lipgloss.Center, msg)
+	if current := m.router.Current(); current != nil {
+		return current.View(m.width, bodyHeight)
+	}
+
+	return ""
 }
 
 func (m Model) renderStatusBar() string {
-	hints := styles.HintKeyStyle.Render(":") + styles.HintDescStyle.Render(" command  ") +
-		styles.HintKeyStyle.Render("/") + styles.HintDescStyle.Render(" filter  ") +
-		styles.HintKeyStyle.Render("?") + styles.HintDescStyle.Render(" help  ") +
-		styles.HintKeyStyle.Render("q") + styles.HintDescStyle.Render(" quit")
+	var hints string
+
+	if current := m.router.Current(); current != nil {
+		for i, h := range current.KeyHints() {
+			if i > 0 {
+				hints += "  "
+			}
+			hints += styles.HintKeyStyle.Render(h.Key) + styles.HintDescStyle.Render(" "+h.Desc)
+		}
+	}
 
 	return styles.StatusBarStyle.Width(m.width).Render(hints)
 }

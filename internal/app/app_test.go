@@ -33,6 +33,12 @@ func TestNew(t *testing.T) {
 	if m.client != client {
 		t.Error("expected model to hold the provided client")
 	}
+	if m.router == nil {
+		t.Error("expected model to have a router")
+	}
+	if m.router.Depth() != 1 {
+		t.Errorf("expected router depth 1 (home view), got %d", m.router.Depth())
+	}
 	if m.ready {
 		t.Error("expected model to not be ready before WindowSizeMsg")
 	}
@@ -144,6 +150,18 @@ func TestUpdate_ForceQuitKey(t *testing.T) {
 	}
 }
 
+func TestUpdate_BackKey_RootView(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client)
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	model := updated.(Model)
+
+	if model.router.Depth() != 1 {
+		t.Error("expected back key on root view to not pop the stack")
+	}
+}
+
 func TestView_NotReady(t *testing.T) {
 	client := newTestClient(t)
 	m := New(client)
@@ -191,7 +209,7 @@ func TestView_Connected(t *testing.T) {
 		t.Error("expected view to show vault version")
 	}
 	if !strings.Contains(view, "Welcome to VaultUI") {
-		t.Error("expected view to contain welcome message")
+		t.Error("expected view to contain welcome message from home view")
 	}
 }
 
@@ -240,5 +258,21 @@ func TestView_Connecting(t *testing.T) {
 	view := m.View()
 	if !strings.Contains(view, "connecting...") {
 		t.Error("expected view to show connecting status")
+	}
+}
+
+func TestView_StatusBarFromCurrentView(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client)
+	m.ready = true
+	m.width = 120
+	m.height = 40
+
+	view := m.View()
+	if !strings.Contains(view, "command") {
+		t.Error("expected status bar to contain key hints from current view")
+	}
+	if !strings.Contains(view, "quit") {
+		t.Error("expected status bar to contain quit hint")
 	}
 }
