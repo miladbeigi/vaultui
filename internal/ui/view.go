@@ -26,3 +26,9 @@ type KeyHint struct {
 	Key  string
 	Desc string
 }
+
+// PushViewMsg is returned as a tea.Cmd by views that want to navigate
+// to a new view. The app model handles this by pushing onto the router.
+type PushViewMsg struct {
+	View View
+}

@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/milad/vaultui/internal/ui"
 	"github.com/milad/vaultui/internal/ui/styles"
 	"github.com/milad/vaultui/internal/ui/views"
 	"github.com/milad/vaultui/internal/vault"
@@ -61,6 +62,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.health = msg.status
 		m.healthErr = msg.err
 		return m, nil
+
+	case ui.PushViewMsg:
+		cmd := m.router.Push(msg.View)
+		return m, cmd
 
 	case tea.KeyMsg:
 		switch {

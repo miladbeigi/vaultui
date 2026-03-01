@@ -75,6 +75,9 @@ func (v *EnginesView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 			v.table.PageDown()
 		case key.Matches(msg, navKeys.PageUp):
 			v.table.PageUp()
+		case key.Matches(msg, navKeys.Enter):
+			cmd := v.handleEnter()
+			return v, cmd
 		}
 	}
 
@@ -112,6 +115,19 @@ func (v *EnginesView) KeyHints() []ui.KeyHint {
 		{Key: "⏎", Desc: "browse"},
 		{Key: "esc", Desc: "back"},
 		{Key: "q", Desc: "quit"},
+	}
+}
+
+func (v *EnginesView) handleEnter() tea.Cmd {
+	engine := v.SelectedEngine()
+	if engine == nil {
+		return nil
+	}
+
+	kvV2 := engine.Version == "v2"
+	next := NewPathBrowserView(v.client, engine.Path, "", kvV2)
+	return func() tea.Msg {
+		return ui.PushViewMsg{View: next}
 	}
 }
 

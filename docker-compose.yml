@@ -1,0 +1,60 @@
+services:
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: vaultui-dev
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: root
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+      VAULT_LOG_LEVEL: info
+    cap_add:
+      - IPC_LOCK
+    tmpfs:
+      - /vault/data
+
+  seed:
+    image: hashicorp/vault:1.15
+    depends_on:
+      - vault
+    restart: "no"
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: root
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        sleep 2
+
+        vault audit enable file file_path=stdout
+
+        vault kv put secret/apps/myapp/config \
+          db_host=db.internal.example.com \
+          db_port=5432 \
+          db_name=myapp_production \
+          db_user=myapp_svc \
+          db_password=s3cret!
+
+        vault kv put secret/apps/myapp/database \
+          connection_url="postgresql://db.internal:5432/myapp" \
+          username=admin \
+          password=hunter2
+
+        vault kv put secret/apps/myapp/api-keys \
+          stripe_key=sk_live_abc123 \
+          sendgrid_key=SG.xyz789
+
+        vault kv put secret/apps/billing/config \
+          api_url=https://billing.example.com \
+          timeout=30s
+
+        vault kv put secret/infra/tls/wildcard \
+          cert="-----BEGIN CERTIFICATE-----" \
+          key="-----BEGIN PRIVATE KEY-----"
+
+        vault kv put secret/infra/aws \
+          access_key=AKIAIOSFODNN7EXAMPLE \
+          secret_key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+
+        echo "Seed data loaded."
