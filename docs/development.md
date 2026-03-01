@@ -128,7 +128,44 @@ vaultui/
 
 ## Local Vault for Testing
 
-Spin up a dev-mode Vault server for local testing:
+### Docker Compose (recommended)
+
+The project includes a `docker-compose.yml` that starts a dev Vault server with audit logging and seeds it with realistic test data:
+
+```sh
+# Start Vault and seed test data
+docker compose up -d
+
+# Run vaultui against it
+VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=root go run .
+
+# Watch Vault audit logs (every API request)
+docker compose logs -f vault
+
+# Tear down when done
+docker compose down
+```
+
+The seed container populates a KV v2 engine with this structure:
+
+```
+secret/
+├── apps/
+│   ├── myapp/
+│   │   ├── config       (db credentials)
+│   │   ├── database     (connection string)
+│   │   └── api-keys     (stripe, sendgrid)
+│   └── billing/
+│       └── config       (api url, timeout)
+└── infra/
+    ├── tls/
+    │   └── wildcard     (cert + key)
+    └── aws              (access keys)
+```
+
+### Manual (without Docker)
+
+If you have the Vault CLI installed locally:
 
 ```sh
 vault server -dev -dev-root-token-id=root
