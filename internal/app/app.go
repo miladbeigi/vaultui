@@ -28,6 +28,7 @@ type Model struct {
 	height    int
 	ready     bool
 	quitting  bool
+	initCmd   tea.Cmd
 	cmdActive bool
 	cmdInput  string
 	cmdError  string
@@ -36,16 +37,18 @@ type Model struct {
 // New creates the initial application model with the given Vault client.
 func New(client *vault.Client) Model {
 	router := NewRouter()
-	router.Push(views.NewHomeView())
+	dashView := views.NewDashboardView(client)
+	router.Push(dashView)
 
 	return Model{
-		client: client,
-		router: router,
+		client:  client,
+		router:  router,
+		initCmd: dashView.Init(),
 	}
 }
 
 func (m Model) Init() tea.Cmd {
-	return m.fetchHealth
+	return tea.Batch(m.fetchHealth, m.initCmd)
 }
 
 func (m Model) fetchHealth() tea.Msg {
@@ -138,6 +141,9 @@ func (m Model) executeCommand() (tea.Model, tea.Cmd) {
 	switch cmd {
 	case "secrets":
 		c := m.router.Push(views.NewEnginesView(m.client))
+		return m, c
+	case "dash", "dashboard":
+		c := m.router.Push(views.NewDashboardView(m.client))
 		return m, c
 	case "q", "quit":
 		m.quitting = true

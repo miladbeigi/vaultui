@@ -208,8 +208,8 @@ func TestView_Connected(t *testing.T) {
 	if !strings.Contains(view, "1.15.4") {
 		t.Error("expected view to show vault version")
 	}
-	if !strings.Contains(view, "Welcome to VaultUI") {
-		t.Error("expected view to contain welcome message from home view")
+	if !strings.Contains(view, "dashboard") {
+		t.Error("expected view to contain dashboard view")
 	}
 }
 
