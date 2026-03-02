@@ -569,7 +569,7 @@ keys:
 - [x] Path Browser for KV v2 (list directories + secrets)
 - [x] Secret Detail View (basic key-value table, copy value, copy JSON)
 - [x] Navigation stack (push/pop)
-- [ ] Command palette (`:secrets`, `:dash`, `:q`)
+- [x] Command palette (`:secrets`, `:q`)
 - [x] Fix layout: sticky header/status bar with fixed body region (three-part layout)
 - [x] Fix table: columns should fill available width, proper frame/borders
 
