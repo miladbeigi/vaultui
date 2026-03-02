@@ -122,7 +122,7 @@ func (t *Table) RowCount() int {
 }
 
 func (t *Table) visibleRows() int {
-	h := t.height - 2 // header row + separator
+	h := t.height - 3 // header row + separator line + gap
 	if h < 1 {
 		return 1
 	}
@@ -170,7 +170,7 @@ func (t *Table) View() string {
 		headerCells = append(headerCells, cell)
 	}
 	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, headerCells...))
-	b.WriteString("\n")
+	b.WriteString("\n\n")
 
 	// Rows
 	vis := t.visibleRows()

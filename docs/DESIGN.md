@@ -566,7 +566,7 @@ keys:
 - [x] Connection header bar (address, namespace, seal status)
 - [x] Bottom status bar with contextual keybinding hints
 - [x] Secret Engines list view
-- [ ] Path Browser for KV v2 (list directories + secrets)
+- [x] Path Browser for KV v2 (list directories + secrets)
 - [ ] Secret Detail View (masked values, reveal, copy)
 - [x] Navigation stack (push/pop)
 - [ ] Global keybindings (`:`, `/`, `?`, `q`, vim nav)

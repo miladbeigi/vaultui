@@ -119,7 +119,7 @@ func TestTable_GoToBottom(t *testing.T) {
 func TestTable_PageDown(t *testing.T) {
 	tbl := NewTable(testColumns())
 	tbl.SetRows(testRows())
-	tbl.SetSize(30, 5) // 3 visible rows (5 - 2 for header)
+	tbl.SetSize(30, 6) // 3 visible rows (6 - 3 for header + separator + gap)
 
 	tbl.PageDown()
 	if tbl.Cursor() != 3 {
@@ -130,7 +130,7 @@ func TestTable_PageDown(t *testing.T) {
 func TestTable_PageUp(t *testing.T) {
 	tbl := NewTable(testColumns())
 	tbl.SetRows(testRows())
-	tbl.SetSize(30, 5)
+	tbl.SetSize(30, 6)
 
 	tbl.GoToBottom()
 	tbl.PageUp()

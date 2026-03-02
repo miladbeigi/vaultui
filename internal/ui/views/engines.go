@@ -84,25 +84,32 @@ func (v *EnginesView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 	return v, nil
 }
 
+const enginesTitleHeight = 2 // title + blank line
+
 func (v *EnginesView) View(width, height int) string {
-	v.table.SetSize(width, height)
+	v.table.SetSize(width, height-enginesTitleHeight)
+
+	title := styles.ViewTitleStyle.Width(width).Render("Secret Engines")
 
 	if v.loading {
-		return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center,
+		body := lipgloss.Place(width, height-enginesTitleHeight, lipgloss.Center, lipgloss.Center,
 			styles.SubtleStyle.Render("Loading secret engines..."))
+		return lipgloss.JoinVertical(lipgloss.Left, title, body)
 	}
 
 	if v.err != nil {
-		return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center,
+		body := lipgloss.Place(width, height-enginesTitleHeight, lipgloss.Center, lipgloss.Center,
 			styles.ErrorStyle.Render("Error: "+v.err.Error()))
+		return lipgloss.JoinVertical(lipgloss.Left, title, body)
 	}
 
 	if len(v.engines) == 0 {
-		return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center,
+		body := lipgloss.Place(width, height-enginesTitleHeight, lipgloss.Center, lipgloss.Center,
 			styles.SubtleStyle.Render("No secret engines found"))
+		return lipgloss.JoinVertical(lipgloss.Left, title, body)
 	}
 
-	return v.table.View()
+	return lipgloss.JoinVertical(lipgloss.Left, title, v.table.View())
 }
 
 func (v *EnginesView) Title() string {

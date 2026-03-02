@@ -193,8 +193,8 @@ func TestPathBrowserView_Enter_Directory(t *testing.T) {
 	}
 }
 
-func TestPathBrowserView_Enter_Secret_Noop(t *testing.T) {
-	v := NewPathBrowserView(newTestClient(t), "secret/", "", true)
+func TestPathBrowserView_Enter_LeafSecret(t *testing.T) {
+	v := NewPathBrowserView(newTestClient(t), "secret/", "apps/", true)
 	v.loading = false
 	v.entries = []vault.PathEntry{
 		{Name: "config", IsDir: false},
@@ -202,8 +202,22 @@ func TestPathBrowserView_Enter_Secret_Noop(t *testing.T) {
 	v.table.SetRows(v.buildRows())
 
 	_, cmd := v.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	if cmd != nil {
-		t.Error("expected no command when entering a leaf secret (not implemented yet)")
+	if cmd == nil {
+		t.Fatal("expected a command when entering a leaf secret")
+	}
+
+	msg := cmd()
+	pushMsg, ok := msg.(ui.PushViewMsg)
+	if !ok {
+		t.Fatalf("expected PushViewMsg, got %T", msg)
+	}
+
+	detailView, ok := pushMsg.View.(*SecretDetailView)
+	if !ok {
+		t.Fatalf("expected *SecretDetailView, got %T", pushMsg.View)
+	}
+	if detailView.path != "apps/config" {
+		t.Errorf("expected path 'apps/config', got %q", detailView.path)
 	}
 }
 

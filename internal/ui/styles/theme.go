@@ -20,7 +20,7 @@ var (
 var HeaderStyle = lipgloss.NewStyle().
 	Background(HeaderBgColor).
 	Foreground(TextColor).
-	Padding(0, 1).
+	Padding(1, 2).
 	BorderStyle(lipgloss.NormalBorder()).
 	BorderBottom(true).
 	BorderForeground(SubtleColor)
@@ -48,7 +48,7 @@ var SubtleStyle = lipgloss.NewStyle().
 var StatusBarStyle = lipgloss.NewStyle().
 	Background(StatusBgColor).
 	Foreground(TextColor).
-	Padding(0, 1).
+	Padding(1, 2).
 	BorderStyle(lipgloss.NormalBorder()).
 	BorderTop(true).
 	BorderForeground(SubtleColor)
@@ -86,6 +86,12 @@ var SuccessStyle = lipgloss.NewStyle().
 // SecretMaskStyle renders masked secret values.
 var SecretMaskStyle = lipgloss.NewStyle().
 	Foreground(SubtleColor)
+
+// ViewTitleStyle renders the view title line (e.g. "Secret Engines").
+var ViewTitleStyle = lipgloss.NewStyle().
+	Foreground(TextColor).
+	Bold(true).
+	PaddingBottom(1)
 
 // BreadcrumbStyle renders the path breadcrumb separator.
 var BreadcrumbStyle = lipgloss.NewStyle().

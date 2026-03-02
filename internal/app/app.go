@@ -94,8 +94,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-const headerHeight = 2    // 1 content + 1 bottom border
-const statusBarHeight = 2 // 1 content + 1 top border
+const headerHeight = 4    // 1 top pad + 1 content + 1 bottom pad + 1 border
+const statusBarHeight = 4 // 1 border + 1 top pad + 1 content + 1 bottom pad
+const bodyPaddingX = 2    // left + right padding (1 each side)
 
 func (m Model) bodyHeight() int {
 	h := m.height - headerHeight - statusBarHeight
@@ -103,6 +104,14 @@ func (m Model) bodyHeight() int {
 		return 1
 	}
 	return h
+}
+
+func (m Model) bodyWidth() int {
+	w := m.width - bodyPaddingX
+	if w < 1 {
+		return 1
+	}
+	return w
 }
 
 func (m Model) View() string {
@@ -118,6 +127,7 @@ func (m Model) View() string {
 	body := lipgloss.NewStyle().
 		Width(m.width).
 		Height(m.bodyHeight()).
+		Padding(0, 1).
 		Render(m.renderBody())
 	statusBar := m.renderStatusBar()
 
@@ -158,7 +168,8 @@ func (m Model) renderHeader() string {
 		right = m.renderHealthInfo()
 	}
 
-	gap := m.width - lipgloss.Width(left) - lipgloss.Width(right) - 2
+	innerWidth := m.width - 4 // account for header Padding(1, 2) = 2 left + 2 right
+	gap := innerWidth - lipgloss.Width(left) - lipgloss.Width(right)
 	if gap < 1 {
 		gap = 1
 	}
@@ -198,17 +209,18 @@ func (m Model) renderHealthInfo() string {
 }
 
 func (m Model) renderBody() string {
+	bw := m.bodyWidth()
 	bh := m.bodyHeight()
 
 	if m.healthErr != nil {
 		msg := styles.ErrorStyle.Render("Could not connect to Vault") + "\n\n" +
 			styles.SubtleStyle.Render(fmt.Sprintf("%v", m.healthErr)) + "\n\n" +
 			styles.SubtleStyle.Render("Check VAULT_ADDR and VAULT_TOKEN, then press q to quit")
-		return lipgloss.Place(m.width, bh, lipgloss.Center, lipgloss.Center, msg)
+		return lipgloss.Place(bw, bh, lipgloss.Center, lipgloss.Center, msg)
 	}
 
 	if current := m.router.Current(); current != nil {
-		return current.View(m.width, bh)
+		return current.View(bw, bh)
 	}
 
 	return ""

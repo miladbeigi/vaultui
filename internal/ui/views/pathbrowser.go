@@ -104,29 +104,34 @@ func (v *PathBrowserView) handleEnter() tea.Cmd {
 		}
 	}
 
-	// Leaf secret — will open Secret Detail View in a future step
-	return nil
+	secretPath := v.path + entry.Name
+	next := NewSecretDetailView(v.client, v.mount, secretPath, v.kvV2)
+	return func() tea.Msg {
+		return ui.PushViewMsg{View: next}
+	}
 }
 
+const pathBreadcrumbHeight = 2 // breadcrumb + blank line
+
 func (v *PathBrowserView) View(width, height int) string {
-	v.table.SetSize(width, height-1) // -1 for breadcrumb line
+	v.table.SetSize(width, height-pathBreadcrumbHeight)
 
 	breadcrumb := v.renderBreadcrumb(width)
 
 	if v.loading {
-		body := lipgloss.Place(width, height-1, lipgloss.Center, lipgloss.Center,
+		body := lipgloss.Place(width, height-pathBreadcrumbHeight, lipgloss.Center, lipgloss.Center,
 			styles.SubtleStyle.Render("Loading..."))
 		return lipgloss.JoinVertical(lipgloss.Left, breadcrumb, body)
 	}
 
 	if v.err != nil {
-		body := lipgloss.Place(width, height-1, lipgloss.Center, lipgloss.Center,
+		body := lipgloss.Place(width, height-pathBreadcrumbHeight, lipgloss.Center, lipgloss.Center,
 			styles.ErrorStyle.Render("Error: "+v.err.Error()))
 		return lipgloss.JoinVertical(lipgloss.Left, breadcrumb, body)
 	}
 
 	if len(v.entries) == 0 {
-		body := lipgloss.Place(width, height-1, lipgloss.Center, lipgloss.Center,
+		body := lipgloss.Place(width, height-pathBreadcrumbHeight, lipgloss.Center, lipgloss.Center,
 			styles.SubtleStyle.Render("Empty — no keys at this path"))
 		return lipgloss.JoinVertical(lipgloss.Left, breadcrumb, body)
 	}
@@ -151,7 +156,7 @@ func (v *PathBrowserView) renderBreadcrumb(width int) string {
 	}
 
 	crumb := strings.Join(parts, sep)
-	return lipgloss.NewStyle().Width(width).Render(crumb)
+	return lipgloss.NewStyle().Width(width).PaddingBottom(1).Render(crumb)
 }
 
 func (v *PathBrowserView) Title() string {

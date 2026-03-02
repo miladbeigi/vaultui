@@ -63,3 +63,48 @@ func (c *Client) ListSecrets(mount, subPath string, kvV2 bool) ([]PathEntry, err
 
 	return entries, nil
 }
+
+// SecretData holds the key-value pairs for a single secret.
+type SecretData struct {
+	Data map[string]string
+	Keys []string
+}
+
+// ReadSecret reads a secret at the given path.
+// For KV v2 it calls GET /v1/{mount}/data/{subPath},
+// for other engines GET /v1/{mount}/{subPath}.
+func (c *Client) ReadSecret(mount, subPath string, kvV2 bool) (*SecretData, error) {
+	readPath := mount + subPath
+	if kvV2 {
+		readPath = mount + "data/" + subPath
+	}
+
+	secret, err := c.raw.Logical().Read(readPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading secret %q: %w", readPath, err)
+	}
+
+	if secret == nil || secret.Data == nil {
+		return nil, fmt.Errorf("no secret found at %q", readPath)
+	}
+
+	raw := secret.Data
+	if kvV2 {
+		if inner, ok := raw["data"].(map[string]interface{}); ok {
+			raw = inner
+		}
+	}
+
+	sd := &SecretData{Data: make(map[string]string, len(raw))}
+	for k, v := range raw {
+		sd.Data[k] = fmt.Sprintf("%v", v)
+	}
+
+	sd.Keys = make([]string, 0, len(sd.Data))
+	for k := range sd.Data {
+		sd.Keys = append(sd.Keys, k)
+	}
+	sort.Strings(sd.Keys)
+
+	return sd, nil
+}
