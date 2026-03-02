@@ -168,4 +168,68 @@ func TestSecretDetailView_KeyHints(t *testing.T) {
 	if len(hints) == 0 {
 		t.Error("expected key hints to be non-empty")
 	}
+
+	hintMap := make(map[string]bool)
+	for _, h := range hints {
+		hintMap[h.Key] = true
+	}
+	for _, expected := range []string{"c", "C"} {
+		if !hintMap[expected] {
+			t.Errorf("expected hint for key %q", expected)
+		}
+	}
+}
+
+func TestSecretDetailView_CopyValue_SetsStatus(t *testing.T) {
+	v := NewSecretDetailView(newTestClient(t), "secret/", "apps/config", true)
+	v.loading = false
+	v.secret = testSecretData()
+	v.table.SetRows(v.buildRows())
+
+	_, cmd := v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+
+	if v.statusMsg == "" {
+		t.Error("expected statusMsg to be set after copy")
+	}
+	if cmd == nil {
+		t.Error("expected a clear command to be returned")
+	}
+}
+
+func TestSecretDetailView_CopyJSON_SetsStatus(t *testing.T) {
+	v := NewSecretDetailView(newTestClient(t), "secret/", "apps/config", true)
+	v.loading = false
+	v.secret = testSecretData()
+	v.table.SetRows(v.buildRows())
+
+	_, cmd := v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'C'}})
+
+	if v.statusMsg == "" {
+		t.Error("expected statusMsg to be set after copy JSON")
+	}
+	if cmd == nil {
+		t.Error("expected a clear command to be returned")
+	}
+}
+
+func TestSecretDetailView_StatusClearMsg(t *testing.T) {
+	v := NewSecretDetailView(newTestClient(t), "secret/", "apps/config", true)
+	v.loading = false
+	v.secret = testSecretData()
+	v.statusMsg = "some status"
+
+	v.Update(statusClearMsg{})
+	if v.statusMsg != "" {
+		t.Error("expected statusMsg to be cleared")
+	}
+}
+
+func TestSecretDetailView_NoKeyHandling_BeforeLoad(t *testing.T) {
+	v := NewSecretDetailView(newTestClient(t), "secret/", "apps/config", true)
+	v.loading = false
+
+	_, cmd := v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	if cmd != nil {
+		t.Error("expected no command when no secret loaded")
+	}
 }

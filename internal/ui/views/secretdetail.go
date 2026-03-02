@@ -1,12 +1,16 @@
 package views
 
 import (
+	"encoding/json"
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/milad/vaultui/internal/clipboard"
 	"github.com/milad/vaultui/internal/ui"
 	"github.com/milad/vaultui/internal/ui/components"
 	"github.com/milad/vaultui/internal/ui/styles"
@@ -18,16 +22,19 @@ type secretReadMsg struct {
 	err  error
 }
 
+type statusClearMsg struct{}
+
 // SecretDetailView displays the key-value pairs of a single secret in a table.
 type SecretDetailView struct {
-	client  *vault.Client
-	mount   string
-	path    string
-	kvV2    bool
-	table   *components.Table
-	secret  *vault.SecretData
-	err     error
-	loading bool
+	client    *vault.Client
+	mount     string
+	path      string
+	kvV2      bool
+	table     *components.Table
+	secret    *vault.SecretData
+	err       error
+	loading   bool
+	statusMsg string
 }
 
 var _ ui.View = (*SecretDetailView)(nil)
@@ -58,6 +65,14 @@ func (v *SecretDetailView) fetchSecret() tea.Msg {
 	return secretReadMsg{data: data, err: err}
 }
 
+var copyKeys = struct {
+	CopyVal  key.Binding
+	CopyJSON key.Binding
+}{
+	CopyVal:  key.NewBinding(key.WithKeys("c")),
+	CopyJSON: key.NewBinding(key.WithKeys("C")),
+}
+
 func (v *SecretDetailView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 	switch msg := msg.(type) {
 	case secretReadMsg:
@@ -67,7 +82,14 @@ func (v *SecretDetailView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		v.table.SetRows(v.buildRows())
 		return v, nil
 
+	case statusClearMsg:
+		v.statusMsg = ""
+		return v, nil
+
 	case tea.KeyMsg:
+		if v.secret == nil {
+			return v, nil
+		}
 		switch {
 		case key.Matches(msg, navKeys.Up):
 			v.table.MoveUp()
@@ -81,10 +103,54 @@ func (v *SecretDetailView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 			v.table.PageDown()
 		case key.Matches(msg, navKeys.PageUp):
 			v.table.PageUp()
+		case key.Matches(msg, copyKeys.CopyVal):
+			cmd := v.copySelectedValue()
+			return v, cmd
+		case key.Matches(msg, copyKeys.CopyJSON):
+			cmd := v.copyJSON()
+			return v, cmd
 		}
 	}
 
 	return v, nil
+}
+
+func (v *SecretDetailView) copySelectedValue() tea.Cmd {
+	idx := v.table.Cursor()
+	if idx < 0 || idx >= len(v.secret.Keys) {
+		return nil
+	}
+	k := v.secret.Keys[idx]
+	val := v.secret.Data[k]
+
+	if err := clipboard.Write(val); err != nil {
+		v.statusMsg = "✗ " + err.Error()
+	} else {
+		v.statusMsg = fmt.Sprintf("✓ Copied '%s' to clipboard", k)
+	}
+	return v.clearStatusAfter()
+}
+
+func (v *SecretDetailView) copyJSON() tea.Cmd {
+	jsonBytes, err := json.MarshalIndent(v.secret.Data, "", "  ")
+	if err != nil {
+		v.statusMsg = "✗ " + err.Error()
+		return v.clearStatusAfter()
+	}
+
+	if err := clipboard.Write(string(jsonBytes)); err != nil {
+		v.statusMsg = "✗ " + err.Error()
+	} else {
+		v.statusMsg = fmt.Sprintf("✓ Copied %d keys as JSON", len(v.secret.Keys))
+	}
+	return v.clearStatusAfter()
+}
+
+func (v *SecretDetailView) clearStatusAfter() tea.Cmd {
+	return func() tea.Msg {
+		time.Sleep(3 * time.Second)
+		return statusClearMsg{}
+	}
 }
 
 const detailBreadcrumbHeight = 2 // breadcrumb + blank line
@@ -112,7 +178,24 @@ func (v *SecretDetailView) View(width, height int) string {
 		return lipgloss.JoinVertical(lipgloss.Left, breadcrumb, body)
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left, breadcrumb, v.table.View())
+	body := lipgloss.JoinVertical(lipgloss.Left, breadcrumb, v.table.View())
+
+	if v.statusMsg != "" {
+		statusLine := styles.SuccessStyle.Render(v.statusMsg)
+		bodyLines := strings.Split(body, "\n")
+		totalHeight := height
+		if len(bodyLines) >= totalHeight {
+			bodyLines[totalHeight-1] = statusLine
+		} else {
+			for len(bodyLines) < totalHeight-1 {
+				bodyLines = append(bodyLines, "")
+			}
+			bodyLines = append(bodyLines, statusLine)
+		}
+		return strings.Join(bodyLines, "\n")
+	}
+
+	return body
 }
 
 func (v *SecretDetailView) renderBreadcrumb(width int) string {
@@ -142,6 +225,8 @@ func (v *SecretDetailView) Title() string {
 func (v *SecretDetailView) KeyHints() []ui.KeyHint {
 	return []ui.KeyHint{
 		{Key: "↑↓", Desc: "navigate"},
+		{Key: "c", Desc: "copy value"},
+		{Key: "C", Desc: "copy JSON"},
 		{Key: "esc", Desc: "back"},
 	}
 }
