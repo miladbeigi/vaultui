@@ -53,6 +53,15 @@ func (r *Router) Replace(v ui.View) tea.Cmd {
 	return v.Init()
 }
 
+// ResetToRoot pops all views except the root, then pushes the given view.
+// This ensures jump-style navigation always produces a [root, target] stack.
+func (r *Router) ResetToRoot(v ui.View) tea.Cmd {
+	if len(r.stack) > 1 {
+		r.stack = r.stack[:1]
+	}
+	return r.Push(v)
+}
+
 // Depth returns the number of views on the stack.
 func (r *Router) Depth() int {
 	return len(r.stack)

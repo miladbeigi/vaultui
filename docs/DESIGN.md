@@ -576,7 +576,7 @@ keys:
 ### Phase 2 — Broader Vault Coverage
 > **Goal:** Cover the main Vault resource types.
 
-- [ ] Dashboard view (health, stats, quick nav)
+- [x] Dashboard view (health, seal type, storage, HA nodes, resource counts, quick nav)
 - [ ] Auth Methods browser
 - [ ] Policies browser + HCL detail viewer
 - [ ] Leases browser with renew/revoke
