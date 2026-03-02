@@ -83,8 +83,7 @@ func (v *DashboardView) fetchData() tea.Msg {
 }
 
 func (v *DashboardView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
-	switch msg := msg.(type) {
-	case dashDataMsg:
+	if msg, ok := msg.(dashDataMsg); ok {
 		v.loading = false
 		v.health = msg.health
 		v.healthErr = msg.healthErr
