@@ -1,4 +1,5 @@
 vaultui
 coverage.out
 *.png
+!docs/images/*.png
 screenshot*

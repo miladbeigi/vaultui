@@ -3,28 +3,9 @@
 A **k9s-inspired terminal UI** for [HashiCorp Vault](https://www.vaultproject.io/).
 Browse secrets, auth methods, policies, and more — without leaving your terminal.
 
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│  VaultUI   ◆  https://vault.example.com  ◆  unsealed  ◆  v1.15.4   │
-├──────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│   Dashboard                                                          │
-│                                                                      │
-│   Status       unsealed ✔         HA Nodes    1 active, 2 standby   │
-│   Version      1.15.4             Cluster     vault-cluster-abc     │
-│   Seal Type    shamir             Storage     raft                  │
-│                                                                      │
-│   Secret Engines  5               Auth Methods  3                   │
-│   Policies        12                                                │
-│                                                                      │
-│   ╭──────────────────────────────────────────────────────────────╮  │
-│   │  [1] Secret Engines   [2] Auth Methods   [3] Policies       │  │
-│   ╰──────────────────────────────────────────────────────────────╯  │
-│                                                                      │
-├──────────────────────────────────────────────────────────────────────┤
-│  1-3 quick nav  ╱  : command  ╱  q quit                              │
-└──────────────────────────────────────────────────────────────────────┘
-```
+<p align="center">
+  <img src="docs/images/dashboard.png" alt="VaultUI Dashboard" width="800">
+</p>
 
 ## Features
 
