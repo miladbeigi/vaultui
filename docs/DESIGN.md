@@ -567,11 +567,9 @@ keys:
 - [x] Bottom status bar with contextual keybinding hints
 - [x] Secret Engines list view
 - [x] Path Browser for KV v2 (list directories + secrets)
-- [ ] Secret Detail View (masked values, reveal, copy)
+- [x] Secret Detail View (basic key-value table, copy value, copy JSON)
 - [x] Navigation stack (push/pop)
-- [ ] Global keybindings (`:`, `/`, `?`, `q`, vim nav)
 - [ ] Command palette (`:secrets`, `:dash`, `:q`)
-- [ ] Fuzzy filter on table views
 - [x] Fix layout: sticky header/status bar with fixed body region (three-part layout)
 - [x] Fix table: columns should fill available width, proper frame/borders
 
@@ -611,6 +609,15 @@ keys:
 - [ ] Responsive layout (adapt to terminal size)
 - [ ] Error overlay with troubleshooting hints
 - [ ] `--output json` flag for headless/scripting mode
+
+### X — Deferred
+> Items deprioritised from their original phase. Will revisit when needed.
+
+- [ ] Help overlay (`?` keybinding to show all keybindings)
+- [ ] Quit confirmation (`q` smart quit — confirm or only from root view)
+- [ ] Fuzzy filter on table views (`/` to filter rows in real-time)
+- [ ] Command palette auto-complete / fuzzy match
+- [ ] Command palette centered modal or status bar replacement layout
 
 ---
 

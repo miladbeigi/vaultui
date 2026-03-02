@@ -28,7 +28,7 @@ func (v *HomeView) Update(_ tea.Msg) (ui.View, tea.Cmd) {
 }
 
 func (v *HomeView) View(width, height int) string {
-	msg := styles.SubtleStyle.Render("Welcome to VaultUI\n\nPress : for commands, ? for help, q to quit")
+	msg := styles.SubtleStyle.Render("Welcome to VaultUI\n\nPress : for commands, 1 for secret engines, q to quit")
 	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, msg)
 }
 
@@ -39,8 +39,7 @@ func (v *HomeView) Title() string {
 func (v *HomeView) KeyHints() []ui.KeyHint {
 	return []ui.KeyHint{
 		{Key: ":", Desc: "command"},
-		{Key: "/", Desc: "filter"},
-		{Key: "?", Desc: "help"},
+		{Key: "1", Desc: "secret engines"},
 		{Key: "q", Desc: "quit"},
 	}
 }

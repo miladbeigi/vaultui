@@ -44,6 +44,11 @@ var HeaderValueStyle = lipgloss.NewStyle().
 var SubtleStyle = lipgloss.NewStyle().
 	Foreground(DimTextColor)
 
+// SecondaryStyle renders text in the secondary accent color.
+var SecondaryStyle = lipgloss.NewStyle().
+	Foreground(SecondaryColor).
+	Bold(true)
+
 // StatusBarStyle is the bottom help/keybinding bar.
 var StatusBarStyle = lipgloss.NewStyle().
 	Background(StatusBgColor).

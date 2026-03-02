@@ -28,6 +28,9 @@ type Model struct {
 	height    int
 	ready     bool
 	quitting  bool
+	cmdActive bool
+	cmdInput  string
+	cmdError  string
 }
 
 // New creates the initial application model with the given Vault client.
@@ -68,6 +71,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case tea.KeyMsg:
+		if m.cmdActive {
+			return m.updateCommandInput(msg)
+		}
+
 		switch {
 		case key.Matches(msg, keys.Quit):
 			m.quitting = true
@@ -79,6 +86,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.router.Pop() {
 				return m, nil
 			}
+		case key.Matches(msg, keys.Command):
+			m.cmdActive = true
+			m.cmdInput = ""
+			m.cmdError = ""
+			return m, nil
 		case key.Matches(msg, keys.Jump1):
 			cmd := m.router.Push(views.NewEnginesView(m.client))
 			return m, cmd
@@ -92,6 +104,50 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m Model) updateCommandInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEnter:
+		return m.executeCommand()
+	case tea.KeyEsc:
+		m.cmdActive = false
+		m.cmdInput = ""
+		m.cmdError = ""
+		return m, nil
+	case tea.KeyBackspace:
+		if m.cmdInput != "" {
+			m.cmdInput = m.cmdInput[:len(m.cmdInput)-1]
+		}
+		m.cmdError = ""
+		return m, nil
+	case tea.KeyRunes:
+		m.cmdInput += string(msg.Runes)
+		m.cmdError = ""
+		return m, nil
+	}
+	return m, nil
+}
+
+func (m Model) executeCommand() (tea.Model, tea.Cmd) {
+	cmd := m.cmdInput
+	m.cmdActive = false
+	m.cmdInput = ""
+	m.cmdError = ""
+
+	switch cmd {
+	case "secrets":
+		c := m.router.Push(views.NewEnginesView(m.client))
+		return m, c
+	case "q", "quit":
+		m.quitting = true
+		return m, tea.Quit
+	default:
+		m.cmdActive = true
+		m.cmdInput = cmd
+		m.cmdError = fmt.Sprintf("unknown command: %s", cmd)
+		return m, nil
+	}
 }
 
 const headerHeight = 4    // 1 top pad + 1 content + 1 bottom pad + 1 border
@@ -208,6 +264,25 @@ func (m Model) renderHealthInfo() string {
 	return parts
 }
 
+const cmdInputHeight = 3 // top border + content + bottom border
+
+func (m Model) renderCommandInput() string {
+	prompt := styles.SecondaryStyle.Render(": ")
+	input := styles.HeaderValueStyle.Render(m.cmdInput)
+	cursor := styles.SecondaryStyle.Render("█")
+
+	line := prompt + input + cursor
+	if m.cmdError != "" {
+		line += "  " + styles.ErrorStyle.Render(m.cmdError)
+	}
+
+	return lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(styles.PrimaryColor).
+		Width(m.bodyWidth() - 2).
+		Render(line)
+}
+
 func (m Model) renderBody() string {
 	bw := m.bodyWidth()
 	bh := m.bodyHeight()
@@ -219,11 +294,22 @@ func (m Model) renderBody() string {
 		return lipgloss.Place(bw, bh, lipgloss.Center, lipgloss.Center, msg)
 	}
 
-	if current := m.router.Current(); current != nil {
-		return current.View(bw, bh)
+	viewHeight := bh
+	var cmdLine string
+	if m.cmdActive {
+		cmdLine = m.renderCommandInput()
+		viewHeight -= cmdInputHeight
 	}
 
-	return ""
+	var viewContent string
+	if current := m.router.Current(); current != nil {
+		viewContent = current.View(bw, viewHeight)
+	}
+
+	if m.cmdActive {
+		return lipgloss.JoinVertical(lipgloss.Left, cmdLine, viewContent)
+	}
+	return viewContent
 }
 
 func (m Model) renderStatusBar() string {

@@ -276,3 +276,148 @@ func TestView_StatusBarFromCurrentView(t *testing.T) {
 		t.Error("expected status bar to contain quit hint")
 	}
 }
+
+func TestCommandPalette_Open(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client)
+	m.ready = true
+	m.width = 120
+	m.height = 40
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{':'}})
+	model := updated.(Model)
+
+	if !model.cmdActive {
+		t.Error("expected command palette to be active after ':'")
+	}
+	if model.cmdInput != "" {
+		t.Error("expected empty input after opening")
+	}
+}
+
+func TestCommandPalette_Close(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client)
+	m.cmdActive = true
+	m.cmdInput = "foo"
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	model := updated.(Model)
+
+	if model.cmdActive {
+		t.Error("expected command palette to close on Esc")
+	}
+	if model.cmdInput != "" {
+		t.Error("expected input to be cleared")
+	}
+}
+
+func TestCommandPalette_TypeAndBackspace(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client)
+	m.cmdActive = true
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	model := updated.(Model)
+	if model.cmdInput != "s" {
+		t.Errorf("expected input 's', got %q", model.cmdInput)
+	}
+
+	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}})
+	model = updated.(Model)
+	if model.cmdInput != "se" {
+		t.Errorf("expected input 'se', got %q", model.cmdInput)
+	}
+
+	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	model = updated.(Model)
+	if model.cmdInput != "s" {
+		t.Errorf("expected input 's' after backspace, got %q", model.cmdInput)
+	}
+}
+
+func TestCommandPalette_ExecuteSecrets(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client)
+	m.cmdActive = true
+	m.cmdInput = "secrets"
+
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model := updated.(Model)
+
+	if model.cmdActive {
+		t.Error("expected command palette to close after execute")
+	}
+	if cmd == nil {
+		t.Error("expected a command to be returned for :secrets")
+	}
+	if model.router.Depth() != 2 {
+		t.Errorf("expected router depth 2 after :secrets, got %d", model.router.Depth())
+	}
+}
+
+func TestCommandPalette_ExecuteQuit(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client)
+	m.cmdActive = true
+	m.cmdInput = "q"
+
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model := updated.(Model)
+
+	if !model.quitting {
+		t.Error("expected quitting after :q")
+	}
+	if cmd == nil {
+		t.Error("expected a Quit command")
+	}
+}
+
+func TestCommandPalette_UnknownCommand(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client)
+	m.cmdActive = true
+	m.cmdInput = "nope"
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model := updated.(Model)
+
+	if !model.cmdActive {
+		t.Error("expected command palette to stay active on unknown command")
+	}
+	if model.cmdError == "" {
+		t.Error("expected error message for unknown command")
+	}
+}
+
+func TestCommandPalette_RenderedInBody(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client)
+	m.ready = true
+	m.width = 120
+	m.height = 40
+	m.cmdActive = true
+	m.cmdInput = "sec"
+
+	view := m.View()
+	if !strings.Contains(view, "sec") {
+		t.Error("expected view to contain command input text")
+	}
+}
+
+func TestCommandPalette_KeysDontLeakToView(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client)
+	m.cmdActive = true
+	m.cmdInput = ""
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
+	model := updated.(Model)
+
+	if model.quitting {
+		t.Error("pressing 'q' while command palette is active should not quit")
+	}
+	if model.cmdInput != "q" {
+		t.Errorf("expected 'q' to be typed into input, got %q", model.cmdInput)
+	}
+}
