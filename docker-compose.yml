@@ -72,3 +72,16 @@ services:
           private_key="$$SSH_PRIV"
 
         echo "Seed data loaded successfully."
+
+  vaultui:
+    build: .
+    depends_on:
+      - seed
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: root
+      TERM: xterm-256color
+    stdin_open: true
+    tty: true
+    profiles:
+      - ui
