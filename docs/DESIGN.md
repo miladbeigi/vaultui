@@ -579,32 +579,32 @@ keys:
 - [x] Dashboard view (health, seal type, storage, HA nodes, resource counts, quick nav)
 - [x] Auth Methods browser (table view, key 2, `:auth` command)
 - [x] Policies browser + HCL detail viewer (table view, key 3, `:policies`, Enter for HCL detail with copy)
-- [ ] KV v2 version history view
-- [ ] Version diff view
-- [ ] Breadcrumb navigation component
+- [x] KV v2 version history view (metadata API, version table, view specific versions)
+- [x] Version diff view (side-by-side comparison of two secret versions)
+- [x] Breadcrumb navigation component (reusable across path-based views)
 
 ### Phase 3 — Power Features
 > **Goal:** Quality-of-life features for daily Vault work.
 
-- [ ] Multiple auth methods (OIDC, userpass, AppRole)
-- [ ] Context switching (multi-Vault, multi-namespace)
-- [ ] Config file support (`~/.vaultui.yaml`)
-- [ ] Background token renewal
-- [ ] Response caching with smart invalidation
-- [ ] Clipboard auto-clear timer
+- [x] Multiple auth methods (userpass, AppRole via CLI flags and config)
+- [x] Context switching (multi-Vault, multi-namespace via `:ctx` command)
+- [x] Config file support (`~/.vaultui.yaml` with contexts, settings, keybindings)
+- [x] Background token renewal (auto-renew at 2/3 TTL)
+- [x] Response caching with smart invalidation (TTL-based, prefix invalidation)
+- [x] Clipboard auto-clear timer (30s default after copying secrets)
 
 ### Phase 4 — Polish & Advanced
 > **Goal:** Production-grade TUI.
 
-- [ ] Light/dark theme support
-- [ ] Configurable keybindings
-- [ ] PKI engine browser (certs, CAs, roles)
-- [ ] Transit engine operations (encrypt/decrypt/rewrap)
-- [ ] Identity entities and groups browser
-- [ ] Mouse support (click breadcrumbs, click rows)
-- [ ] Responsive layout (adapt to terminal size)
-- [ ] Error overlay with troubleshooting hints
-- [ ] `--output json` flag for headless/scripting mode
+- [x] Light/dark theme support (`:theme` toggle, config-driven)
+- [x] Configurable keybindings (via `settings.keybindings` in config)
+- [x] PKI engine browser (certs, roles, cert PEM detail with copy)
+- [x] Transit engine operations (key browser, key detail with properties)
+- [x] Identity entities and groups browser (tab switching, detail view)
+- [x] Mouse support (scroll wheel navigation, click-to-select table rows)
+- [x] Responsive layout (compact header for narrow terminals, minimum size guard)
+- [x] Error overlay with troubleshooting hints (contextual advice per error type)
+- [x] `--output json` flag / `vaultui get` subcommand for headless scripting
 
 ### X — Deferred
 > Items deprioritised from their original phase. Will revisit when needed.
