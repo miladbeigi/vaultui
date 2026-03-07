@@ -36,8 +36,26 @@ type Config struct {
 
 // Settings holds global UI preferences.
 type Settings struct {
-	Theme            string `yaml:"theme,omitempty"`
-	ClipboardTimeout int    `yaml:"clipboard_timeout,omitempty"`
+	Theme            string      `yaml:"theme,omitempty"`
+	ClipboardTimeout int         `yaml:"clipboard_timeout,omitempty"`
+	Keybindings      Keybindings `yaml:"keybindings,omitempty"`
+}
+
+// Keybindings allows users to override default key assignments.
+// Values are comma-separated key names (e.g. "k,up").
+type Keybindings struct {
+	Up       string `yaml:"up,omitempty"`
+	Down     string `yaml:"down,omitempty"`
+	Top      string `yaml:"top,omitempty"`
+	Bottom   string `yaml:"bottom,omitempty"`
+	PageDown string `yaml:"page_down,omitempty"`
+	PageUp   string `yaml:"page_up,omitempty"`
+	Enter    string `yaml:"enter,omitempty"`
+	Back     string `yaml:"back,omitempty"`
+	Quit     string `yaml:"quit,omitempty"`
+	Command  string `yaml:"command,omitempty"`
+	Copy     string `yaml:"copy,omitempty"`
+	CopyJSON string `yaml:"copy_json,omitempty"`
 }
 
 // DefaultConfigPath returns the default path for the config file.

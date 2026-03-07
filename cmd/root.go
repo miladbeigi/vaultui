@@ -62,6 +62,7 @@ and leases — all without leaving the terminal.`,
 		if cfg.Settings.Theme != "" {
 			styles.ApplyTheme(cfg.Settings.Theme)
 		}
+		app.ApplyKeybindings(cfg.Settings.Keybindings)
 
 		model := app.New(vc, cfg, viper.GetString("config"))
 		p := tea.NewProgram(model, tea.WithAltScreen())
