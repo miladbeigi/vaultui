@@ -569,7 +569,7 @@ keys:
 - [x] Path Browser for KV v2 (list directories + secrets)
 - [x] Secret Detail View (basic key-value table, copy value, copy JSON)
 - [x] Navigation stack (push/pop)
-- [x] Command palette (`:secrets`, `:q`)
+- [x] Command palette (`:secrets`, `:auth`, `:dash`, `:q`)
 - [x] Fix layout: sticky header/status bar with fixed body region (three-part layout)
 - [x] Fix table: columns should fill available width, proper frame/borders
 
@@ -577,7 +577,7 @@ keys:
 > **Goal:** Cover the main Vault resource types.
 
 - [x] Dashboard view (health, seal type, storage, HA nodes, resource counts, quick nav)
-- [ ] Auth Methods browser
+- [x] Auth Methods browser (table view, key 2, `:auth` command)
 - [ ] Policies browser + HCL detail viewer
 - [ ] Leases browser with renew/revoke
 - [ ] KV v2 version history view
