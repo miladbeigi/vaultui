@@ -100,6 +100,12 @@ path "secret/metadata/apps/myapp/*" {
 }
 POLICY
 
+# ── Identity entities and groups ─────────────────────────
+vault write identity/entity name="test-user-entity" policies="readonly"
+vault write identity/entity name="admin-entity" policies="admin"
+vault write identity/group name="dev-team" policies="readonly" type="internal"
+vault write identity/group name="ops-team" policies="admin" type="internal"
+
 # ── PKI engine ───────────────────────────────────────────
 vault secrets enable pki
 vault secrets tune -max-lease-ttl=87600h pki/
