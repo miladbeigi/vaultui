@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/miladbeigi/vaultui/internal/config"
 	"github.com/miladbeigi/vaultui/internal/ui"
 	"github.com/miladbeigi/vaultui/internal/ui/styles"
 	"github.com/miladbeigi/vaultui/internal/ui/views"
@@ -21,6 +22,8 @@ type healthMsg struct {
 // Model is the top-level Bubble Tea model for the application.
 type Model struct {
 	client    *vault.Client
+	cfg       *config.Config
+	cfgPath   string
 	router    *Router
 	health    *vault.HealthStatus
 	healthErr error
@@ -35,13 +38,19 @@ type Model struct {
 }
 
 // New creates the initial application model with the given Vault client.
-func New(client *vault.Client) Model {
+func New(client *vault.Client, cfg *config.Config, cfgPath string) Model {
 	router := NewRouter()
 	dashView := views.NewDashboardView(client)
 	router.Push(dashView)
 
+	if cfg == nil {
+		cfg = &config.Config{}
+	}
+
 	return Model{
 		client:  client,
+		cfg:     cfg,
+		cfgPath: cfgPath,
 		router:  router,
 		initCmd: dashView.Init(),
 	}
@@ -72,6 +81,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ui.PushViewMsg:
 		cmd := m.router.Push(msg.View)
 		return m, cmd
+
+	case views.SwitchContextMsg:
+		return m.switchContext(msg.Context)
 
 	case tea.KeyMsg:
 		if m.cmdActive {
@@ -157,6 +169,9 @@ func (m Model) executeCommand() (tea.Model, tea.Cmd) {
 	case "dash", "dashboard":
 		c := m.router.ResetToRoot(views.NewDashboardView(m.client))
 		return m, c
+	case "ctx", "contexts":
+		c := m.router.ResetToRoot(views.NewContextsView(m.cfg))
+		return m, c
 	case "q", "quit":
 		m.quitting = true
 		return m, tea.Quit
@@ -166,6 +181,48 @@ func (m Model) executeCommand() (tea.Model, tea.Cmd) {
 		m.cmdError = fmt.Sprintf("unknown command: %s", cmd)
 		return m, nil
 	}
+}
+
+func (m Model) switchContext(ctx config.Context) (tea.Model, tea.Cmd) {
+	newClient, err := vault.NewClient(vault.ClientConfig{
+		Address:   ctx.Address,
+		Token:     ctx.Token,
+		Namespace: ctx.Namespace,
+	})
+	if err != nil {
+		m.healthErr = err
+		return m, nil
+	}
+
+	if ctx.Auth.Method != "" && ctx.Auth.Method != "token" {
+		err := newClient.Authenticate(vault.AuthConfig{
+			Method:    vault.AuthMethod(ctx.Auth.Method),
+			MountPath: ctx.Auth.MountPath,
+			Username:  ctx.Auth.Username,
+			Password:  ctx.Auth.Password,
+			RoleID:    ctx.Auth.RoleID,
+			SecretID:  ctx.Auth.SecretID,
+		})
+		if err != nil {
+			m.healthErr = err
+			return m, nil
+		}
+	}
+
+	m.client = newClient
+	m.cfg.CurrentContext = ctx.Name
+	m.health = nil
+	m.healthErr = nil
+
+	// Save updated current context
+	_ = config.Save(m.cfgPath, m.cfg)
+
+	router := NewRouter()
+	dashView := views.NewDashboardView(m.client)
+	router.Push(dashView)
+	m.router = router
+
+	return m, tea.Batch(m.fetchHealth, dashView.Init())
 }
 
 const headerHeight = 4    // 1 top pad + 1 content + 1 bottom pad + 1 border

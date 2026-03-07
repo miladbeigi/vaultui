@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/miladbeigi/vaultui/internal/app"
+	"github.com/miladbeigi/vaultui/internal/config"
 	"github.com/miladbeigi/vaultui/internal/vault"
 )
 
@@ -56,7 +57,9 @@ and leases — all without leaving the terminal.`,
 			}
 		}
 
-		model := app.New(vc)
+		cfg, _ := config.Load(viper.GetString("config"))
+
+		model := app.New(vc, cfg, viper.GetString("config"))
 		p := tea.NewProgram(model, tea.WithAltScreen())
 		if _, err := p.Run(); err != nil {
 			return fmt.Errorf("failed to run vaultui: %w", err)
