@@ -578,7 +578,7 @@ keys:
 
 - [x] Dashboard view (health, seal type, storage, HA nodes, resource counts, quick nav)
 - [x] Auth Methods browser (table view, key 2, `:auth` command)
-- [ ] Policies browser + HCL detail viewer
+- [x] Policies browser + HCL detail viewer (table view, key 3, `:policies`, Enter for HCL detail with copy)
 - [ ] Leases browser with renew/revoke
 - [ ] KV v2 version history view
 - [ ] Version diff view
