@@ -100,6 +100,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Jump2):
 			cmd := m.router.ResetToRoot(views.NewAuthMethodsView(m.client))
 			return m, cmd
+		case key.Matches(msg, keys.Jump3):
+			cmd := m.router.ResetToRoot(views.NewPoliciesView(m.client))
+			return m, cmd
 		}
 	}
 
@@ -147,6 +150,9 @@ func (m Model) executeCommand() (tea.Model, tea.Cmd) {
 		return m, c
 	case "auth":
 		c := m.router.ResetToRoot(views.NewAuthMethodsView(m.client))
+		return m, c
+	case "policies":
+		c := m.router.ResetToRoot(views.NewPoliciesView(m.client))
 		return m, c
 	case "dash", "dashboard":
 		c := m.router.ResetToRoot(views.NewDashboardView(m.client))

@@ -47,4 +47,35 @@ vault kv put secret/infra/ssh/deploy-key \
   public_key="ssh-rsa AAAAB3NzaFAKETESTKEY000000000000 test-deploy@fake-host" \
   private_key="$SSH_PRIV"
 
+# ── Auth methods ───────────────────────────────────────────
+vault auth enable userpass
+vault write auth/userpass/users/testuser password=FAKE-pass-do-not-use policies=default
+
+vault auth enable approle
+vault write auth/approle/role/test-role token_ttl=1h token_max_ttl=4h policies=default
+
+vault auth enable -description="LDAP auth (unconfigured)" ldap
+
+# ── Policies ──────────────────────────────────────────────
+vault policy write readonly - <<'POLICY'
+path "secret/data/*" {
+  capabilities = ["read", "list"]
+}
+POLICY
+
+vault policy write admin - <<'POLICY'
+path "*" {
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
+}
+POLICY
+
+vault policy write app-myapp - <<'POLICY'
+path "secret/data/apps/myapp/*" {
+  capabilities = ["read", "list"]
+}
+path "secret/metadata/apps/myapp/*" {
+  capabilities = ["list"]
+}
+POLICY
+
 echo "Seed data loaded successfully."

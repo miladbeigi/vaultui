@@ -123,6 +123,15 @@ func (c *Client) ListPolicies() ([]string, error) {
 	return policies, nil
 }
 
+// GetPolicy reads a single ACL policy by name and returns its HCL body.
+func (c *Client) GetPolicy(name string) (string, error) {
+	policy, err := c.raw.Sys().GetPolicy(name)
+	if err != nil {
+		return "", fmt.Errorf("reading policy %q: %w", name, err)
+	}
+	return policy, nil
+}
+
 // ListSecretEngines returns all mounted secret engines, sorted by path.
 func (c *Client) ListSecretEngines() ([]MountEntry, error) {
 	mounts, err := c.raw.Sys().ListMounts()
