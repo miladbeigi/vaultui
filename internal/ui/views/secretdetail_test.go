@@ -7,7 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/milad/vaultui/internal/vault"
+	"github.com/miladbeigi/vaultui/internal/vault"
 )
 
 func testSecretData() *vault.SecretData {

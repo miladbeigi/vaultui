@@ -8,8 +8,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/milad/vaultui/internal/app"
-	"github.com/milad/vaultui/internal/vault"
+	"github.com/miladbeigi/vaultui/internal/app"
+	"github.com/miladbeigi/vaultui/internal/vault"
 )
 
 var (

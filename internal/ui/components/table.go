@@ -5,7 +5,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/milad/vaultui/internal/ui/styles"
+	"github.com/miladbeigi/vaultui/internal/ui/styles"
 )
 
 // Column defines a table column with a header and minimum width.

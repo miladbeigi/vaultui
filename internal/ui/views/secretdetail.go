@@ -10,11 +10,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/milad/vaultui/internal/clipboard"
-	"github.com/milad/vaultui/internal/ui"
-	"github.com/milad/vaultui/internal/ui/components"
-	"github.com/milad/vaultui/internal/ui/styles"
-	"github.com/milad/vaultui/internal/vault"
+	"github.com/miladbeigi/vaultui/internal/clipboard"
+	"github.com/miladbeigi/vaultui/internal/ui"
+	"github.com/miladbeigi/vaultui/internal/ui/components"
+	"github.com/miladbeigi/vaultui/internal/ui/styles"
+	"github.com/miladbeigi/vaultui/internal/vault"
 )
 
 type secretReadMsg struct {

@@ -1,7 +1,7 @@
 # VaultUI
 
 A **k9s-inspired terminal UI** for [HashiCorp Vault](https://www.vaultproject.io/).
-Browse secrets, auth methods, policies, and more — without leaving your terminal.
+Browse secrets, auth methods, and more — without leaving your terminal.
 
 <p align="center">
   <img src="docs/images/dashboard.png" alt="VaultUI Dashboard" width="800">
@@ -28,13 +28,13 @@ Browse secrets, auth methods, policies, and more — without leaving your termin
 ### Install
 
 ```bash
-go install github.com/milad/vaultui@latest
+go install github.com/miladbeigi/vaultui@latest
 ```
 
 Or build from source:
 
 ```bash
-git clone https://github.com/milad/vaultui.git
+git clone https://github.com/miladbeigi/vaultui.git
 cd vaultui
 go build -o vaultui .
 ```

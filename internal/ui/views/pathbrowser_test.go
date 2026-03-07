@@ -7,8 +7,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/milad/vaultui/internal/ui"
-	"github.com/milad/vaultui/internal/vault"
+	"github.com/miladbeigi/vaultui/internal/ui"
+	"github.com/miladbeigi/vaultui/internal/vault"
 )
 
 func TestPathBrowserView_Title(t *testing.T) {

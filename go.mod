@@ -1,4 +1,4 @@
-module github.com/milad/vaultui
+module github.com/miladbeigi/vaultui
 
 go 1.25.1
 

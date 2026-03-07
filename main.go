@@ -1,6 +1,6 @@
 package main
 
-import "github.com/milad/vaultui/cmd"
+import "github.com/miladbeigi/vaultui/cmd"
 
 func main() {
 	cmd.Execute()

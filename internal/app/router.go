@@ -3,7 +3,7 @@ package app
 import (
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/milad/vaultui/internal/ui"
+	"github.com/miladbeigi/vaultui/internal/ui"
 )
 
 // Router manages a stack of views for push/pop navigation.

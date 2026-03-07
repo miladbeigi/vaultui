@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/milad/vaultui/internal/vault"
+	"github.com/miladbeigi/vaultui/internal/vault"
 )
 
 func testHealth() *vault.HealthStatus {

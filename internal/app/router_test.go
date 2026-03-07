@@ -5,7 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/milad/vaultui/internal/ui"
+	"github.com/miladbeigi/vaultui/internal/ui"
 )
 
 // stubView is a minimal ui.View implementation for testing.

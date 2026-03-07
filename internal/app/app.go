@@ -7,10 +7,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/milad/vaultui/internal/ui"
-	"github.com/milad/vaultui/internal/ui/styles"
-	"github.com/milad/vaultui/internal/ui/views"
-	"github.com/milad/vaultui/internal/vault"
+	"github.com/miladbeigi/vaultui/internal/ui"
+	"github.com/miladbeigi/vaultui/internal/ui/styles"
+	"github.com/miladbeigi/vaultui/internal/ui/views"
+	"github.com/miladbeigi/vaultui/internal/vault"
 )
 
 type healthMsg struct {
