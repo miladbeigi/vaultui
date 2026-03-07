@@ -10,6 +10,7 @@ import (
 
 	"github.com/miladbeigi/vaultui/internal/app"
 	"github.com/miladbeigi/vaultui/internal/config"
+	"github.com/miladbeigi/vaultui/internal/ui/styles"
 	"github.com/miladbeigi/vaultui/internal/vault"
 )
 
@@ -58,6 +59,9 @@ and leases — all without leaving the terminal.`,
 		}
 
 		cfg, _ := config.Load(viper.GetString("config"))
+		if cfg.Settings.Theme != "" {
+			styles.ApplyTheme(cfg.Settings.Theme)
+		}
 
 		model := app.New(vc, cfg, viper.GetString("config"))
 		p := tea.NewProgram(model, tea.WithAltScreen())
