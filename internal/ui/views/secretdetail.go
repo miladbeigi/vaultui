@@ -133,7 +133,7 @@ func (v *SecretDetailView) copySelectedValue() tea.Cmd {
 	k := v.secret.Keys[idx]
 	val := v.secret.Data[k]
 
-	if err := clipboard.Write(val); err != nil {
+	if err := clipboard.WriteWithAutoClear(val, 30*time.Second); err != nil {
 		v.statusMsg = "✗ " + err.Error()
 	} else {
 		v.statusMsg = fmt.Sprintf("✓ Copied '%s' to clipboard", k)
@@ -148,7 +148,7 @@ func (v *SecretDetailView) copyJSON() tea.Cmd {
 		return v.clearStatusAfter()
 	}
 
-	if err := clipboard.Write(string(jsonBytes)); err != nil {
+	if err := clipboard.WriteWithAutoClear(string(jsonBytes), 30*time.Second); err != nil {
 		v.statusMsg = "✗ " + err.Error()
 	} else {
 		v.statusMsg = fmt.Sprintf("✓ Copied %d keys as JSON", len(v.secret.Keys))

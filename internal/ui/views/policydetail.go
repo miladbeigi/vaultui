@@ -163,7 +163,7 @@ func (v *PolicyDetailView) KeyHints() []ui.KeyHint {
 }
 
 func (v *PolicyDetailView) copyBody() tea.Cmd {
-	if err := clipboard.Write(v.body); err != nil {
+	if err := clipboard.WriteWithAutoClear(v.body, 30*time.Second); err != nil {
 		v.statusMsg = styles.ErrorStyle.Render(fmt.Sprintf("Copy failed: %v", err))
 	} else {
 		v.statusMsg = styles.SuccessStyle.Render("Copied policy to clipboard")

@@ -5,10 +5,55 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
+	"time"
+)
+
+var (
+	clearTimer *time.Timer
+	clearMu    sync.Mutex
 )
 
 // Write places text on the system clipboard.
 func Write(text string) error {
+	return writeClipboard(text)
+}
+
+// WriteWithAutoClear places text on the system clipboard and schedules
+// automatic clearing after the given duration. Pass 0 to skip auto-clear.
+func WriteWithAutoClear(text string, clearAfter time.Duration) error {
+	if err := writeClipboard(text); err != nil {
+		return err
+	}
+
+	if clearAfter <= 0 {
+		return nil
+	}
+
+	clearMu.Lock()
+	defer clearMu.Unlock()
+
+	if clearTimer != nil {
+		clearTimer.Stop()
+	}
+	clearTimer = time.AfterFunc(clearAfter, func() {
+		_ = writeClipboard("")
+	})
+
+	return nil
+}
+
+// CancelAutoClear cancels any pending clipboard auto-clear timer.
+func CancelAutoClear() {
+	clearMu.Lock()
+	defer clearMu.Unlock()
+	if clearTimer != nil {
+		clearTimer.Stop()
+		clearTimer = nil
+	}
+}
+
+func writeClipboard(text string) error {
 	var cmd *exec.Cmd
 
 	switch runtime.GOOS {
