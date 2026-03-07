@@ -18,12 +18,16 @@ type HealthStatus struct {
 
 // Health queries the Vault /sys/health endpoint.
 func (c *Client) Health() (*HealthStatus, error) {
+	if v, ok := c.cache.Get("sys/health"); ok {
+		return v.(*HealthStatus), nil
+	}
+
 	resp, err := c.raw.Sys().Health()
 	if err != nil {
 		return nil, fmt.Errorf("vault health check: %w", err)
 	}
 
-	return &HealthStatus{
+	h := &HealthStatus{
 		Initialized: resp.Initialized,
 		Sealed:      resp.Sealed,
 		Standby:     resp.Standby,
@@ -31,7 +35,9 @@ func (c *Client) Health() (*HealthStatus, error) {
 		ClusterName: resp.ClusterName,
 		ClusterID:   resp.ClusterID,
 		Enterprise:  resp.Enterprise,
-	}, nil
+	}
+	c.cache.Set("sys/health", h)
+	return h, nil
 }
 
 // SealInfo holds seal type and storage backend from /sys/seal-status.
@@ -89,6 +95,10 @@ type MountEntry struct {
 
 // ListAuthMethods returns all enabled auth methods, sorted by path.
 func (c *Client) ListAuthMethods() ([]MountEntry, error) {
+	if v, ok := c.cache.Get("sys/auth"); ok {
+		return v.([]MountEntry), nil
+	}
+
 	auths, err := c.raw.Sys().ListAuth()
 	if err != nil {
 		return nil, fmt.Errorf("listing auth methods: %w", err)
@@ -110,6 +120,7 @@ func (c *Client) ListAuthMethods() ([]MountEntry, error) {
 		return entries[i].Path < entries[j].Path
 	})
 
+	c.cache.Set("sys/auth", entries)
 	return entries, nil
 }
 
@@ -134,6 +145,10 @@ func (c *Client) GetPolicy(name string) (string, error) {
 
 // ListSecretEngines returns all mounted secret engines, sorted by path.
 func (c *Client) ListSecretEngines() ([]MountEntry, error) {
+	if v, ok := c.cache.Get("sys/mounts"); ok {
+		return v.([]MountEntry), nil
+	}
+
 	mounts, err := c.raw.Sys().ListMounts()
 	if err != nil {
 		return nil, fmt.Errorf("listing secret engines: %w", err)
@@ -161,5 +176,6 @@ func (c *Client) ListSecretEngines() ([]MountEntry, error) {
 		return entries[i].Path < entries[j].Path
 	})
 
+	c.cache.Set("sys/mounts", entries)
 	return entries, nil
 }

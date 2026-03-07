@@ -23,6 +23,11 @@ func (c *Client) ListSecrets(mount, subPath string, kvV2 bool) ([]PathEntry, err
 		listPath = mount + "metadata/" + subPath
 	}
 
+	cacheKey := "list:" + listPath
+	if v, ok := c.cache.Get(cacheKey); ok {
+		return v.([]PathEntry), nil
+	}
+
 	secret, err := c.raw.Logical().List(listPath)
 	if err != nil {
 		return nil, fmt.Errorf("listing path %q: %w", listPath, err)
@@ -55,13 +60,13 @@ func (c *Client) ListSecrets(mount, subPath string, kvV2 bool) ([]PathEntry, err
 	}
 
 	sort.Slice(entries, func(i, j int) bool {
-		// Directories first, then alphabetical
 		if entries[i].IsDir != entries[j].IsDir {
 			return entries[i].IsDir
 		}
 		return entries[i].Name < entries[j].Name
 	})
 
+	c.cache.Set(cacheKey, entries)
 	return entries, nil
 }
 

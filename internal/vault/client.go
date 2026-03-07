@@ -5,14 +5,18 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	vaultapi "github.com/hashicorp/vault/api"
 )
+
+const defaultCacheTTL = 30 * time.Second
 
 // Client wraps the official Vault API client with convenience methods
 // and token resolution logic.
 type Client struct {
 	raw       *vaultapi.Client
+	cache     *Cache
 	addr      string
 	namespace string
 }
@@ -51,6 +55,7 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 
 	return &Client{
 		raw:       raw,
+		cache:     NewCache(defaultCacheTTL),
 		addr:      raw.Address(),
 		namespace: cfg.Namespace,
 	}, nil
@@ -105,4 +110,14 @@ func (c *Client) Namespace() string {
 // HasToken reports whether the client has a token set.
 func (c *Client) HasToken() bool {
 	return c.raw.Token() != ""
+}
+
+// ClearCache invalidates all cached responses.
+func (c *Client) ClearCache() {
+	c.cache.Clear()
+}
+
+// InvalidateCache removes cached entries matching the given prefix.
+func (c *Client) InvalidateCache(prefix string) {
+	c.cache.InvalidatePrefix(prefix)
 }
