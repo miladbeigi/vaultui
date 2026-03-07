@@ -100,4 +100,23 @@ path "secret/metadata/apps/myapp/*" {
 }
 POLICY
 
+# ── PKI engine ───────────────────────────────────────────
+vault secrets enable pki
+vault secrets tune -max-lease-ttl=87600h pki/
+vault write pki/root/generate/internal \
+  common_name="Test Root CA" \
+  ttl=87600h
+vault write pki/roles/test-role \
+  allowed_domains="test.example.com" \
+  allow_subdomains=true \
+  max_ttl=72h
+vault write pki/issue/test-role \
+  common_name="app1.test.example.com" \
+  ttl=24h
+
+# ── Transit engine ───────────────────────────────────────
+vault secrets enable transit
+vault write -f transit/keys/my-app-key
+vault write -f transit/keys/payment-key type=aes256-gcm96
+
 echo "Seed data loaded successfully."

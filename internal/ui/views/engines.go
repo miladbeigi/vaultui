@@ -131,8 +131,16 @@ func (v *EnginesView) handleEnter() tea.Cmd {
 		return nil
 	}
 
-	kvV2 := engine.Version == "v2"
-	next := NewPathBrowserView(v.client, engine.Path, "", kvV2)
+	var next ui.View
+	switch engine.Type {
+	case "pki":
+		next = NewPKIView(v.client, engine.Path)
+	case "transit":
+		next = NewTransitView(v.client, engine.Path)
+	default:
+		kvV2 := engine.Version == "v2"
+		next = NewPathBrowserView(v.client, engine.Path, "", kvV2)
+	}
 	return func() tea.Msg {
 		return ui.PushViewMsg{View: next}
 	}
