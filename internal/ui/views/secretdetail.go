@@ -30,6 +30,7 @@ type SecretDetailView struct {
 	mount     string
 	path      string
 	kvV2      bool
+	version   int
 	table     *components.Table
 	secret    *vault.SecretData
 	err       error
@@ -61,6 +62,10 @@ func (v *SecretDetailView) Init() tea.Cmd {
 }
 
 func (v *SecretDetailView) fetchSecret() tea.Msg {
+	if v.version > 0 && v.kvV2 {
+		data, err := v.client.ReadSecretVersion(v.mount, v.path, v.version)
+		return secretReadMsg{data: data, err: err}
+	}
 	data, err := v.client.ReadSecret(v.mount, v.path, v.kvV2)
 	return secretReadMsg{data: data, err: err}
 }
@@ -109,6 +114,11 @@ func (v *SecretDetailView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		case key.Matches(msg, copyKeys.CopyJSON):
 			cmd := v.copyJSON()
 			return v, cmd
+		case msg.String() == "v":
+			if v.kvV2 {
+				next := NewVersionsView(v.client, v.mount, v.path)
+				return v, func() tea.Msg { return ui.PushViewMsg{View: next} }
+			}
 		}
 	}
 
@@ -199,36 +209,32 @@ func (v *SecretDetailView) View(width, height int) string {
 }
 
 func (v *SecretDetailView) renderBreadcrumb(width int) string {
-	sep := styles.BreadcrumbStyle.Render(" ▸ ")
-	parts := []string{styles.SubtleStyle.Render(v.mount)}
-
-	segments := strings.Split(strings.TrimSuffix(v.path, "/"), "/")
-	for i, seg := range segments {
-		if seg == "" {
-			continue
-		}
-		if i == len(segments)-1 {
-			parts = append(parts, styles.BreadcrumbActiveStyle.Render(seg))
-		} else {
-			parts = append(parts, styles.SubtleStyle.Render(seg+"/"))
-		}
+	suffix := ""
+	if v.version > 0 {
+		suffix = fmt.Sprintf("v%d", v.version)
 	}
-
-	crumb := strings.Join(parts, sep)
-	return lipgloss.NewStyle().Width(width).PaddingBottom(1).Render(crumb)
+	return components.Breadcrumb(v.mount, v.path, suffix, width)
 }
 
 func (v *SecretDetailView) Title() string {
-	return v.mount + v.path
+	title := v.mount + v.path
+	if v.version > 0 {
+		title += fmt.Sprintf(" (v%d)", v.version)
+	}
+	return title
 }
 
 func (v *SecretDetailView) KeyHints() []ui.KeyHint {
-	return []ui.KeyHint{
+	hints := []ui.KeyHint{
 		{Key: "↑↓", Desc: "navigate"},
 		{Key: "c", Desc: "copy value"},
 		{Key: "C", Desc: "copy JSON"},
-		{Key: "esc", Desc: "back"},
 	}
+	if v.kvV2 {
+		hints = append(hints, ui.KeyHint{Key: "v", Desc: "versions"})
+	}
+	hints = append(hints, ui.KeyHint{Key: "esc", Desc: "back"})
+	return hints
 }
 
 func (v *SecretDetailView) buildRows() []components.Row {

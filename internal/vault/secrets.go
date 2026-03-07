@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 )
 
 // PathEntry represents a single item in a secret engine path listing.
@@ -62,6 +63,92 @@ func (c *Client) ListSecrets(mount, subPath string, kvV2 bool) ([]PathEntry, err
 	})
 
 	return entries, nil
+}
+
+// VersionEntry represents a single version in KV v2 metadata.
+type VersionEntry struct {
+	Version      int
+	CreatedTime  time.Time
+	DeletionTime string
+	Destroyed    bool
+}
+
+// ReadSecretMetadata reads the metadata for a KV v2 secret, returning version history.
+func (c *Client) ReadSecretMetadata(mount, subPath string) ([]VersionEntry, error) {
+	metaPath := mount + "metadata/" + subPath
+	secret, err := c.raw.Logical().Read(metaPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading metadata %q: %w", metaPath, err)
+	}
+	if secret == nil || secret.Data == nil {
+		return nil, fmt.Errorf("no metadata found at %q", metaPath)
+	}
+
+	versionsRaw, ok := secret.Data["versions"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unexpected versions format in metadata for %q", metaPath)
+	}
+
+	entries := make([]VersionEntry, 0, len(versionsRaw))
+	for vStr, vData := range versionsRaw {
+		ver := 0
+		fmt.Sscanf(vStr, "%d", &ver)
+
+		vMap, ok := vData.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		entry := VersionEntry{Version: ver}
+
+		if ct, ok := vMap["created_time"].(string); ok {
+			entry.CreatedTime, _ = time.Parse(time.RFC3339Nano, ct)
+		}
+		if dt, ok := vMap["deletion_time"].(string); ok && dt != "" {
+			entry.DeletionTime = dt
+		}
+		if d, ok := vMap["destroyed"].(bool); ok {
+			entry.Destroyed = d
+		}
+
+		entries = append(entries, entry)
+	}
+
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Version > entries[j].Version
+	})
+
+	return entries, nil
+}
+
+// ReadSecretVersion reads a specific version of a KV v2 secret.
+func (c *Client) ReadSecretVersion(mount, subPath string, version int) (*SecretData, error) {
+	readPath := fmt.Sprintf("%sdata/%s", mount, subPath)
+	secret, err := c.raw.Logical().ReadWithData(readPath, map[string][]string{
+		"version": {fmt.Sprintf("%d", version)},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("reading secret %q version %d: %w", readPath, version, err)
+	}
+	if secret == nil || secret.Data == nil {
+		return nil, fmt.Errorf("no secret found at %q version %d", readPath, version)
+	}
+
+	raw := secret.Data
+	if inner, ok := raw["data"].(map[string]interface{}); ok {
+		raw = inner
+	}
+
+	sd := &SecretData{Data: make(map[string]string, len(raw))}
+	for k, v := range raw {
+		sd.Data[k] = fmt.Sprintf("%v", v)
+	}
+	sd.Keys = make([]string, 0, len(sd.Data))
+	for k := range sd.Data {
+		sd.Keys = append(sd.Keys, k)
+	}
+	sort.Strings(sd.Keys)
+	return sd, nil
 }
 
 // SecretData holds the key-value pairs for a single secret.

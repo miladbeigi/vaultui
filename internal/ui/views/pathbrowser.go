@@ -1,8 +1,6 @@
 package views
 
 import (
-	"strings"
-
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -140,23 +138,7 @@ func (v *PathBrowserView) View(width, height int) string {
 }
 
 func (v *PathBrowserView) renderBreadcrumb(width int) string {
-	sep := styles.BreadcrumbStyle.Render(" ▸ ")
-
-	parts := []string{styles.BreadcrumbActiveStyle.Render(v.mount)}
-
-	if v.path != "" {
-		segments := strings.Split(strings.TrimSuffix(v.path, "/"), "/")
-		for i, seg := range segments {
-			if i == len(segments)-1 {
-				parts = append(parts, styles.BreadcrumbActiveStyle.Render(seg+"/"))
-			} else {
-				parts = append(parts, styles.SubtleStyle.Render(seg+"/"))
-			}
-		}
-	}
-
-	crumb := strings.Join(parts, sep)
-	return lipgloss.NewStyle().Width(width).PaddingBottom(1).Render(crumb)
+	return components.Breadcrumb(v.mount, v.path, "", width)
 }
 
 func (v *PathBrowserView) Title() string {

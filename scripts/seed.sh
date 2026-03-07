@@ -8,12 +8,31 @@ sleep 2
 vault audit enable file file_path=stdout
 
 # ── App secrets (typical web app config) ──────────────────
+# Version 1
 vault kv put secret/apps/myapp/config \
   db_host=fake-db.test.internal \
   db_port=5432 \
   db_name=testdb \
   db_user=testuser \
   db_password=FAKE-password-do-not-use
+
+# Version 2 — changed password and added log_level
+vault kv put secret/apps/myapp/config \
+  db_host=fake-db.test.internal \
+  db_port=5432 \
+  db_name=testdb \
+  db_user=testuser \
+  db_password=FAKE-new-password-v2 \
+  log_level=info
+
+# Version 3 — changed log_level, removed db_name
+vault kv put secret/apps/myapp/config \
+  db_host=fake-db.test.internal \
+  db_port=5432 \
+  db_user=testuser \
+  db_password=FAKE-new-password-v2 \
+  log_level=debug \
+  api_endpoint=https://api.test.example.com/v2
 
 vault kv put secret/apps/myapp/database \
   connection_url="postgresql://fake-db.test.internal:5432/testdb" \

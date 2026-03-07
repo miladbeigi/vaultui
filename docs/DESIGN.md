@@ -579,7 +579,6 @@ keys:
 - [x] Dashboard view (health, seal type, storage, HA nodes, resource counts, quick nav)
 - [x] Auth Methods browser (table view, key 2, `:auth` command)
 - [x] Policies browser + HCL detail viewer (table view, key 3, `:policies`, Enter for HCL detail with copy)
-- [ ] Leases browser with renew/revoke
 - [ ] KV v2 version history view
 - [ ] Version diff view
 - [ ] Breadcrumb navigation component
@@ -593,9 +592,6 @@ keys:
 - [ ] Background token renewal
 - [ ] Response caching with smart invalidation
 - [ ] Clipboard auto-clear timer
-- [ ] Create/edit secrets (form overlay)
-- [ ] Create/edit policies (embedded editor)
-- [ ] Enable/disable engines and auth methods
 
 ### Phase 4 — Polish & Advanced
 > **Goal:** Production-grade TUI.
@@ -618,6 +614,11 @@ keys:
 - [ ] Fuzzy filter on table views (`/` to filter rows in real-time)
 - [ ] Command palette auto-complete / fuzzy match
 - [ ] Command palette centered modal or status bar replacement layout
+- [ ] Leases browser (read-only, needs dynamic secret engines for test data)
+- [ ] Lease renew/revoke (write action)
+- [ ] Create/edit secrets (form overlay, write action)
+- [ ] Create/edit policies (embedded editor, write action)
+- [ ] Enable/disable engines and auth methods (write action)
 
 ---
 
