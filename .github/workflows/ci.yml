@@ -12,7 +12,7 @@ permissions:
 jobs:
   test:
     name: Test
-    runs-on: arc-runner-set
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -27,7 +27,7 @@ jobs:
 
   lint:
     name: Lint
-    runs-on: arc-runner-set
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -35,15 +35,14 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Install golangci-lint
-        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-
       - name: golangci-lint
-        run: golangci-lint run
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
 
   vet:
     name: Vet
-    runs-on: arc-runner-set
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -55,7 +54,7 @@ jobs:
 
   build:
     name: Build
-    runs-on: arc-runner-set
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -67,7 +66,7 @@ jobs:
 
   tidy:
     name: Module tidy check
-    runs-on: arc-runner-set
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
