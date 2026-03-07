@@ -425,10 +425,8 @@ func (m Model) renderBody() string {
 	bh := m.bodyHeight()
 
 	if m.healthErr != nil {
-		msg := styles.ErrorStyle.Render("Could not connect to Vault") + "\n\n" +
-			styles.SubtleStyle.Render(fmt.Sprintf("%v", m.healthErr)) + "\n\n" +
-			styles.SubtleStyle.Render("Check VAULT_ADDR and VAULT_TOKEN, then press q to quit")
-		return lipgloss.Place(bw, bh, lipgloss.Center, lipgloss.Center, msg)
+		overlay := views.NewErrorOverlayView("Could not connect to Vault", m.healthErr)
+		return overlay.View(bw, bh)
 	}
 
 	viewHeight := bh
