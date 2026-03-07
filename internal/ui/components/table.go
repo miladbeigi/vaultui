@@ -121,6 +121,17 @@ func (t *Table) RowCount() int {
 	return len(t.rows)
 }
 
+// HandleClick processes a mouse click at the given row offset (relative to
+// the table's top, after the header). Returns true if a valid row was clicked.
+func (t *Table) HandleClick(row int) bool {
+	actualRow := row - 2 + t.offset // 2 = header + blank line
+	if actualRow < 0 || actualRow >= len(t.rows) {
+		return false
+	}
+	t.cursor = actualRow
+	return true
+}
+
 func (t *Table) visibleRows() int {
 	h := t.height - 3 // header row + separator line + gap
 	if h < 1 {

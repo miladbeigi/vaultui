@@ -65,7 +65,7 @@ and leases — all without leaving the terminal.`,
 		app.ApplyKeybindings(cfg.Settings.Keybindings)
 
 		model := app.New(vc, cfg, viper.GetString("config"))
-		p := tea.NewProgram(model, tea.WithAltScreen())
+		p := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
 		if _, err := p.Run(); err != nil {
 			return fmt.Errorf("failed to run vaultui: %w", err)
 		}

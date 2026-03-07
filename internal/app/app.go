@@ -125,6 +125,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	if msg, ok := msg.(tea.MouseMsg); ok {
+		switch msg.Button {
+		case tea.MouseButtonWheelUp:
+			if current := m.router.Current(); current != nil {
+				updated, cmd := current.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
+				m.router.Replace(updated)
+				return m, cmd
+			}
+		case tea.MouseButtonWheelDown:
+			if current := m.router.Current(); current != nil {
+				updated, cmd := current.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+				m.router.Replace(updated)
+				return m, cmd
+			}
+		}
+	}
+
 	if current := m.router.Current(); current != nil {
 		updated, cmd := current.Update(msg)
 		m.router.Replace(updated)
