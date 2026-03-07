@@ -27,6 +27,7 @@ type Model struct {
 	router    *Router
 	health    *vault.HealthStatus
 	healthErr error
+	renewer   *vault.TokenRenewer
 	width     int
 	height    int
 	ready     bool
@@ -57,6 +58,7 @@ func New(client *vault.Client, cfg *config.Config, cfgPath string) Model {
 }
 
 func (m Model) Init() tea.Cmd {
+	m.renewer = vault.StartTokenRenewer(m.client)
 	return tea.Batch(m.fetchHealth, m.initCmd)
 }
 
@@ -92,9 +94,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch {
 		case key.Matches(msg, keys.Quit):
+			m.stopRenewer()
 			m.quitting = true
 			return m, tea.Quit
 		case key.Matches(msg, keys.ForceQuit):
+			m.stopRenewer()
 			m.quitting = true
 			return m, tea.Quit
 		case key.Matches(msg, keys.Back):
@@ -183,6 +187,13 @@ func (m Model) executeCommand() (tea.Model, tea.Cmd) {
 	}
 }
 
+func (m *Model) stopRenewer() {
+	if m.renewer != nil {
+		m.renewer.Stop()
+		m.renewer = nil
+	}
+}
+
 func (m Model) switchContext(ctx config.Context) (tea.Model, tea.Cmd) {
 	newClient, err := vault.NewClient(vault.ClientConfig{
 		Address:   ctx.Address,
@@ -209,13 +220,15 @@ func (m Model) switchContext(ctx config.Context) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	m.stopRenewer()
 	m.client = newClient
 	m.cfg.CurrentContext = ctx.Name
 	m.health = nil
 	m.healthErr = nil
 
-	// Save updated current context
 	_ = config.Save(m.cfgPath, m.cfg)
+
+	m.renewer = vault.StartTokenRenewer(m.client)
 
 	router := NewRouter()
 	dashView := views.NewDashboardView(m.client)
