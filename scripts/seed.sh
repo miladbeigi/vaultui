@@ -68,10 +68,13 @@ vault kv put secret/infra/ssh/deploy-key \
 
 # ── Auth methods ───────────────────────────────────────────
 vault auth enable userpass
-vault write auth/userpass/users/testuser password=FAKE-pass-do-not-use policies=default
+vault write auth/userpass/users/testuser password=testpass policies=readonly,app-myapp
 
 vault auth enable approle
-vault write auth/approle/role/test-role token_ttl=1h token_max_ttl=4h policies=default
+vault write auth/approle/role/test-role token_ttl=1h token_max_ttl=4h policies=readonly
+ROLE_ID=$(vault read -field=role_id auth/approle/role/test-role/role-id)
+vault write -f auth/approle/role/test-role/secret-id
+echo "AppRole role_id: $ROLE_ID"
 
 vault auth enable -description="LDAP auth (unconfigured)" ldap
 

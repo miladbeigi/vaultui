@@ -13,10 +13,16 @@ import (
 )
 
 var (
-	cfgFile   string
-	vaultAddr string
-	token     string
-	namespace string
+	cfgFile    string
+	vaultAddr  string
+	token      string
+	namespace  string
+	authMethod string
+	username   string
+	password   string
+	roleID     string
+	secretID   string
+	authMount  string
 )
 
 var rootCmd = &cobra.Command{
@@ -33,6 +39,21 @@ and leases — all without leaving the terminal.`,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create vault client: %w", err)
+		}
+
+		method := vault.AuthMethod(viper.GetString("auth.method"))
+		if method != "" && method != vault.AuthToken {
+			err := vc.Authenticate(vault.AuthConfig{
+				Method:    method,
+				MountPath: viper.GetString("auth.mount"),
+				Username:  viper.GetString("auth.username"),
+				Password:  viper.GetString("auth.password"),
+				RoleID:    viper.GetString("auth.role-id"),
+				SecretID:  viper.GetString("auth.secret-id"),
+			})
+			if err != nil {
+				return fmt.Errorf("authentication failed: %w", err)
+			}
 		}
 
 		model := app.New(vc)
@@ -57,10 +78,22 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&vaultAddr, "vault-addr", "", "Vault server address")
 	rootCmd.PersistentFlags().StringVar(&token, "token", "", "Vault authentication token")
 	rootCmd.PersistentFlags().StringVar(&namespace, "namespace", "", "Vault namespace")
+	rootCmd.PersistentFlags().StringVar(&authMethod, "auth-method", "token", "Auth method: token, userpass, approle")
+	rootCmd.PersistentFlags().StringVar(&authMount, "auth-mount", "", "Custom mount path for auth method")
+	rootCmd.PersistentFlags().StringVar(&username, "username", "", "Username for userpass auth")
+	rootCmd.PersistentFlags().StringVar(&password, "password", "", "Password for userpass auth")
+	rootCmd.PersistentFlags().StringVar(&roleID, "role-id", "", "Role ID for AppRole auth")
+	rootCmd.PersistentFlags().StringVar(&secretID, "secret-id", "", "Secret ID for AppRole auth")
 
 	_ = viper.BindPFlag("vault.address", rootCmd.PersistentFlags().Lookup("vault-addr"))
 	_ = viper.BindPFlag("vault.token", rootCmd.PersistentFlags().Lookup("token"))
 	_ = viper.BindPFlag("vault.namespace", rootCmd.PersistentFlags().Lookup("namespace"))
+	_ = viper.BindPFlag("auth.method", rootCmd.PersistentFlags().Lookup("auth-method"))
+	_ = viper.BindPFlag("auth.mount", rootCmd.PersistentFlags().Lookup("auth-mount"))
+	_ = viper.BindPFlag("auth.username", rootCmd.PersistentFlags().Lookup("username"))
+	_ = viper.BindPFlag("auth.password", rootCmd.PersistentFlags().Lookup("password"))
+	_ = viper.BindPFlag("auth.role-id", rootCmd.PersistentFlags().Lookup("role-id"))
+	_ = viper.BindPFlag("auth.secret-id", rootCmd.PersistentFlags().Lookup("secret-id"))
 }
 
 func initConfig() {
