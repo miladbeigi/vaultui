@@ -294,6 +294,10 @@ func (m Model) bodyWidth() int {
 	return w
 }
 
+func (m Model) isCompact() bool {
+	return m.width < 80
+}
+
 func (m Model) View() string {
 	if !m.ready {
 		return "Initializing..."
@@ -301,6 +305,11 @@ func (m Model) View() string {
 
 	if m.quitting {
 		return ""
+	}
+
+	if m.width < 40 || m.height < 10 {
+		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center,
+			styles.SubtleStyle.Render("Terminal too small\nResize to at least 40x10"))
 	}
 
 	header := m.renderHeader()
@@ -326,9 +335,6 @@ func (m Model) renderHeader() string {
 
 	title := styles.TitleStyle.Render(" VaultUI ")
 
-	addrPart := styles.HeaderLabelStyle.Render(" ◆ ") + styles.HeaderValueStyle.Render(addr)
-	nsPart := styles.HeaderLabelStyle.Render("  ns: ") + styles.HeaderValueStyle.Render(ns)
-
 	var statusPart string
 	switch {
 	case m.healthErr != nil:
@@ -341,6 +347,13 @@ func (m Model) renderHeader() string {
 			styles.SubtleStyle.Render("connecting...")
 	}
 
+	if m.isCompact() {
+		left := lipgloss.JoinHorizontal(lipgloss.Center, title, statusPart)
+		return styles.HeaderStyle.Width(m.width).Render(left)
+	}
+
+	addrPart := styles.HeaderLabelStyle.Render(" ◆ ") + styles.HeaderValueStyle.Render(addr)
+	nsPart := styles.HeaderLabelStyle.Render("  ns: ") + styles.HeaderValueStyle.Render(ns)
 	left := lipgloss.JoinHorizontal(lipgloss.Center, title, addrPart, nsPart, statusPart)
 
 	var right string
@@ -348,7 +361,7 @@ func (m Model) renderHeader() string {
 		right = m.renderHealthInfo()
 	}
 
-	innerWidth := m.width - 4 // account for header Padding(1, 2) = 2 left + 2 right
+	innerWidth := m.width - 4
 	gap := innerWidth - lipgloss.Width(left) - lipgloss.Width(right)
 	if gap < 1 {
 		gap = 1
