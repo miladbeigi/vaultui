@@ -601,7 +601,7 @@ keys:
 - [x] PKI engine browser (certs, roles, cert PEM detail with copy)
 - [x] Transit engine operations (key browser, key detail with properties)
 - [x] Identity entities and groups browser (tab switching, detail view)
-- [x] Mouse support (scroll wheel navigation, click-to-select table rows)
+- [ ] ~~Mouse support~~ (removed)
 - [x] Responsive layout (compact header for narrow terminals, minimum size guard)
 - [x] Error overlay with troubleshooting hints (contextual advice per error type)
 - [x] `--output json` flag / `vaultui get` subcommand for headless scripting
