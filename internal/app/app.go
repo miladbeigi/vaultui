@@ -21,21 +21,21 @@ type healthMsg struct {
 
 // Model is the top-level Bubble Tea model for the application.
 type Model struct {
-	client  *vault.Client
-	cfg     *config.Config
-	cfgPath string
-	router  *Router
-	health       *vault.HealthStatus
-	healthErr    error
-	renewer      *vault.TokenRenewer
-	width        int
-	height       int
-	ready        bool
-	quitting     bool
-	initCmd      tea.Cmd
-	cmdActive    bool
-	cmdInput     string
-	cmdError     string
+	client    *vault.Client
+	cfg       *config.Config
+	cfgPath   string
+	router    *Router
+	health    *vault.HealthStatus
+	healthErr error
+	renewer   *vault.TokenRenewer
+	width     int
+	height    int
+	ready     bool
+	quitting  bool
+	initCmd   tea.Cmd
+	cmdActive bool
+	cmdInput  string
+	cmdError  string
 }
 
 // New creates the initial application model with the given Vault client.

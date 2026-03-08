@@ -74,7 +74,8 @@ func (v *TransitView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		case key.Matches(msg, navKeys.PageUp):
 			v.table.PageUp()
 		case key.Matches(msg, navKeys.Enter):
-			return v, v.handleEnter()
+			cmd := v.handleEnter()
+			return v, cmd
 		}
 	}
 

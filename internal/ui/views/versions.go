@@ -178,13 +178,16 @@ func (v *VersionsView) selectedVersion() *vault.VersionEntry {
 func (v *VersionsView) buildRows() []components.Row {
 	rows := make([]components.Row, len(v.versions))
 	for i, ver := range v.versions {
-		status := styles.SuccessStyle.Render("current")
-		if ver.Destroyed {
+		var status string
+		switch {
+		case ver.Destroyed:
 			status = styles.ErrorStyle.Render("destroyed")
-		} else if ver.DeletionTime != "" {
+		case ver.DeletionTime != "":
 			status = styles.ErrorStyle.Render("deleted")
-		} else if i > 0 {
+		case i > 0:
 			status = styles.SubtleStyle.Render("old")
+		default:
+			status = styles.SuccessStyle.Render("current")
 		}
 
 		created := ver.CreatedTime.Format("2006-01-02 15:04:05")

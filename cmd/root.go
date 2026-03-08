@@ -14,16 +14,16 @@ import (
 )
 
 var (
-	cfgFile      string
-	vaultAddr    string
-	token        string
-	namespace    string
-	authMethod   string
-	username     string
-	password     string
-	roleID       string
-	secretID     string
-	authMount    string
+	cfgFile    string
+	vaultAddr  string
+	token      string
+	namespace  string
+	authMethod string
+	username   string
+	password   string
+	roleID     string
+	secretID   string
+	authMount  string
 )
 
 var rootCmd = &cobra.Command{

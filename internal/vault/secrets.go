@@ -96,8 +96,10 @@ func (c *Client) ReadSecretMetadata(mount, subPath string) ([]VersionEntry, erro
 
 	entries := make([]VersionEntry, 0, len(versionsRaw))
 	for vStr, vData := range versionsRaw {
-		ver := 0
-		fmt.Sscanf(vStr, "%d", &ver)
+		var ver int
+		if _, err := fmt.Sscanf(vStr, "%d", &ver); err != nil {
+			continue
+		}
 
 		vMap, ok := vData.(map[string]interface{})
 		if !ok {

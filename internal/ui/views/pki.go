@@ -89,7 +89,8 @@ func (v *PKIView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 			v.tab = (v.tab + 1) % 2
 			v.rebuildTable()
 		case key.Matches(msg, navKeys.Enter):
-			return v, v.handleEnter()
+			cmd := v.handleEnter()
+			return v, cmd
 		}
 	}
 
