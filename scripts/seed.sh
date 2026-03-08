@@ -5,7 +5,7 @@ set -e
 
 sleep 2
 
-vault audit enable file file_path=/vault/audit/audit.log
+vault audit enable file file_path=stdout
 
 # ── App secrets (typical web app config) ──────────────────
 # Version 1
@@ -95,9 +95,6 @@ path "sys/policies/acl/*" {
   capabilities = ["read"]
 }
 path "sys/health" {
-  capabilities = ["read"]
-}
-path "sys/audit" {
   capabilities = ["read"]
 }
 path "secret/metadata" {

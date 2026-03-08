@@ -21,11 +21,10 @@ type healthMsg struct {
 
 // Model is the top-level Bubble Tea model for the application.
 type Model struct {
-	client       *vault.Client
-	cfg          *config.Config
-	cfgPath      string
-	auditLogPath string
-	router       *Router
+	client  *vault.Client
+	cfg     *config.Config
+	cfgPath string
+	router  *Router
 	health       *vault.HealthStatus
 	healthErr    error
 	renewer      *vault.TokenRenewer
@@ -40,7 +39,7 @@ type Model struct {
 }
 
 // New creates the initial application model with the given Vault client.
-func New(client *vault.Client, cfg *config.Config, cfgPath string, auditLogPath string) Model {
+func New(client *vault.Client, cfg *config.Config, cfgPath string) Model {
 	router := NewRouter()
 	dashView := views.NewDashboardView(client)
 	router.Push(dashView)
@@ -50,12 +49,11 @@ func New(client *vault.Client, cfg *config.Config, cfgPath string, auditLogPath 
 	}
 
 	return Model{
-		client:       client,
-		cfg:          cfg,
-		cfgPath:      cfgPath,
-		auditLogPath: auditLogPath,
-		router:       router,
-		initCmd:      dashView.Init(),
+		client:  client,
+		cfg:     cfg,
+		cfgPath: cfgPath,
+		router:  router,
+		initCmd: dashView.Init(),
 	}
 }
 
@@ -192,9 +190,6 @@ func (m Model) executeCommand() (tea.Model, tea.Cmd) {
 		return m, c
 	case "transit":
 		c := m.router.ResetToRoot(views.NewTransitView(m.client, "transit/"))
-		return m, c
-	case "audit", "logs":
-		c := m.router.ResetToRoot(views.NewAuditView(m.client, m.auditLogPath))
 		return m, c
 	case "ctx", "contexts":
 		c := m.router.ResetToRoot(views.NewContextsView(m.cfg))

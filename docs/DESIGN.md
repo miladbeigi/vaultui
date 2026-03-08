@@ -608,7 +608,7 @@ keys:
 ### Phase 5 — Observability & Productivity
 > **Goal:** Deeper insight into Vault state, faster navigation workflows.
 
-- [x] Live audit log stream (tail server logs via `sys/monitor`, color-coded by level, pause/resume/clear, audit devices browser)
+- [ ] ~~Live audit log stream~~ (deferred — requires local file access or reliable remote streaming)
 - [ ] Token inspector (view current token details: policies, TTL remaining, accessor, entity ID, metadata)
 - [ ] Secret engine dashboard (per-engine detail view: mount config, default/max TTL, tuning parameters, description)
 - [ ] Secret jump-to-path (`Ctrl+G` or `:go <path>` to navigate directly to a secret path without browsing folder-by-folder)
@@ -639,6 +639,7 @@ keys:
 ### X — Deferred
 > Items deprioritised from their original phase. Will revisit when needed.
 
+- [ ] Live audit log stream (needs reliable remote access — file tail, socket audit device, or sys/monitor)
 - [ ] Help overlay (`?` keybinding to show all keybindings)
 - [ ] Quit confirmation (`q` smart quit — confirm or only from root view)
 - [ ] Fuzzy filter on table views (`/` to filter rows in real-time)

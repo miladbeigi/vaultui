@@ -30,11 +30,7 @@ func (r *Router) Pop() bool {
 	if len(r.stack) <= 1 {
 		return false
 	}
-	top := r.stack[len(r.stack)-1]
 	r.stack = r.stack[:len(r.stack)-1]
-	if c, ok := top.(ui.Cleanable); ok {
-		c.Cleanup()
-	}
 	return true
 }
 
@@ -60,11 +56,6 @@ func (r *Router) Replace(v ui.View) tea.Cmd {
 // ResetToRoot pops all views except the root, then pushes the given view.
 // This ensures jump-style navigation always produces a [root, target] stack.
 func (r *Router) ResetToRoot(v ui.View) tea.Cmd {
-	for i := len(r.stack) - 1; i >= 1; i-- {
-		if c, ok := r.stack[i].(ui.Cleanable); ok {
-			c.Cleanup()
-		}
-	}
 	if len(r.stack) > 1 {
 		r.stack = r.stack[:1]
 	}
