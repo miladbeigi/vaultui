@@ -605,16 +605,49 @@ keys:
 - [x] Error overlay with troubleshooting hints (contextual advice per error type)
 - [x] `--output json` flag / `vaultui get` subcommand for headless scripting
 
+### Phase 5 — Observability & Productivity
+> **Goal:** Deeper insight into Vault state, faster navigation workflows.
+
+- [x] Live audit log stream (tail server logs via `sys/monitor`, color-coded by level, pause/resume/clear, audit devices browser)
+- [ ] Token inspector (view current token details: policies, TTL remaining, accessor, entity ID, metadata)
+- [ ] Secret engine dashboard (per-engine detail view: mount config, default/max TTL, tuning parameters, description)
+- [ ] Secret jump-to-path (`Ctrl+G` or `:go <path>` to navigate directly to a secret path without browsing folder-by-folder)
+- [ ] Command palette auto-complete (tab completion and fuzzy matching for `:` commands)
+
+### Phase 6 — Database Secrets Engine
+> **Goal:** Read-only browser for Vault's database secrets engine.
+
+- [ ] Database connections browser (list `database/config/*` — name, plugin type, allowed roles)
+- [ ] Connection detail view (plugin, connection URL mask, verify connection status, allowed/denied roles)
+- [ ] Database roles browser (list `database/roles/*` — name, DB name, default TTL, max TTL)
+- [ ] Role detail view (creation statements, revocation statements, TTL config, role type)
+- [ ] Static roles browser (list `database/static-roles/*` — name, DB name, rotation period, last rotation time)
+- [ ] Static role detail view (username, rotation period, last vault rotation timestamp)
+- [ ] Jump shortcut (`7`) and `:db` command for quick access
+- [ ] Seed data with Docker Compose (PostgreSQL container + database engine config + roles)
+
+### Phase 7 — AWS Secrets Engine
+> **Goal:** Read-only browser for Vault's AWS secrets engine.
+
+- [ ] AWS roles browser (list `aws/roles/*` — name, credential type, policy ARNs)
+- [ ] Role detail view (credential type: iam_user / assumed_role / federation_token, policy document, ARNs, default TTL, max TTL)
+- [ ] AWS engine config viewer (read `aws/config/root` — region, IAM endpoint, max retries; credentials masked)
+- [ ] AWS leases browser (list active leases under `aws/` — lease ID, role, TTL remaining, issue time)
+- [ ] Jump shortcut (`8`) and `:aws` command for quick access
+- [ ] Seed data with LocalStack or mock config for development testing
+
 ### X — Deferred
 > Items deprioritised from their original phase. Will revisit when needed.
 
 - [ ] Help overlay (`?` keybinding to show all keybindings)
 - [ ] Quit confirmation (`q` smart quit — confirm or only from root view)
 - [ ] Fuzzy filter on table views (`/` to filter rows in real-time)
-- [ ] Command palette auto-complete / fuzzy match
 - [ ] Command palette centered modal or status bar replacement layout
-- [ ] Leases browser (read-only, needs dynamic secret engines for test data)
+- [ ] Leases browser (global, read-only across all engines)
 - [ ] Lease renew/revoke (write action)
+- [ ] Generate database credentials (write action — `database/creds/<role>`)
+- [ ] Database static role manual rotation (write action — `database/rotate-role/<role>`)
+- [ ] Generate AWS credentials (write action — `aws/creds/<role>`, `aws/sts/<role>`)
 - [ ] Create/edit secrets (form overlay, write action)
 - [ ] Create/edit policies (embedded editor, write action)
 - [ ] Enable/disable engines and auth methods (write action)

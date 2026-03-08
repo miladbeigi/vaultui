@@ -27,6 +27,12 @@ type KeyHint struct {
 	Desc string
 }
 
+// Cleanable is an optional interface for views that hold resources
+// (goroutines, connections) needing cleanup when navigated away from.
+type Cleanable interface {
+	Cleanup()
+}
+
 // PushViewMsg is returned as a tea.Cmd by views that want to navigate
 // to a new view. The app model handles this by pushing onto the router.
 type PushViewMsg struct {

@@ -97,6 +97,9 @@ path "sys/policies/acl/*" {
 path "sys/health" {
   capabilities = ["read"]
 }
+path "sys/audit" {
+  capabilities = ["read"]
+}
 path "secret/metadata" {
   capabilities = ["list"]
 }
