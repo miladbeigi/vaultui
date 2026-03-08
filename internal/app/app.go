@@ -194,19 +194,6 @@ func (m Model) executeCommand() (tea.Model, tea.Cmd) {
 	case "ctx", "contexts":
 		c := m.router.ResetToRoot(views.NewContextsView(m.cfg))
 		return m, c
-	case "theme dark":
-		styles.ApplyTheme("dark")
-		return m, nil
-	case "theme light":
-		styles.ApplyTheme("light")
-		return m, nil
-	case "theme":
-		if styles.CurrentThemeName() == "dark" {
-			styles.ApplyTheme("light")
-		} else {
-			styles.ApplyTheme("dark")
-		}
-		return m, nil
 	case "q", "quit":
 		m.quitting = true
 		return m, tea.Quit

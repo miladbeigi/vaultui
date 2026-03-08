@@ -35,7 +35,6 @@ contexts:
       method: userpass
       username: admin
 settings:
-  theme: dark
   clipboard_timeout: 30
 `
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {

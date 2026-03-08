@@ -529,7 +529,6 @@ vault:
 
 # UI preferences
 ui:
-  theme: dark                 # dark | light
   show_icons: true            # folder/file icons in path browser
   mask_secrets: true          # mask values by default
   clipboard_clear_seconds: 30 # auto-clear clipboard (0 = disabled)
@@ -596,7 +595,7 @@ keys:
 ### Phase 4 — Polish & Advanced
 > **Goal:** Production-grade TUI.
 
-- [x] Light/dark theme support (`:theme` toggle, config-driven)
+- [ ] ~~Light/dark theme support~~ (removed)
 - [x] Configurable keybindings (via `settings.keybindings` in config)
 - [x] PKI engine browser (certs, roles, cert PEM detail with copy)
 - [x] Transit engine operations (key browser, key detail with properties)

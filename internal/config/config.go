@@ -36,7 +36,6 @@ type Config struct {
 
 // Settings holds global UI preferences.
 type Settings struct {
-	Theme            string      `yaml:"theme,omitempty"`
 	ClipboardTimeout int         `yaml:"clipboard_timeout,omitempty"`
 	Keybindings      Keybindings `yaml:"keybindings,omitempty"`
 }
