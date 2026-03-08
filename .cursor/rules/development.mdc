@@ -21,7 +21,7 @@ alwaysApply: true
 
 - Quick run: `VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=root go run .`
 - Config file: `~/.vaultui.yaml` supports multiple Vault contexts
-- CLI flags: `--vault-addr`, `--token`, `--namespace`, `--config`
+- CLI flags: `--vault-addr`, `--token`, `--namespace`, `--config`, `--auth-method`, `--username`, `--password`, `--role-id`, `--secret-id`, `--auth-mount`
 - Context switching inside the TUI: `:ctx` command
 
 ## Making Changes
@@ -69,10 +69,29 @@ This runs all 6 checks that match GitHub Actions CI exactly:
 2. `make vet` — go vet static analysis
 3. `make lint` — golangci-lint
 4. `make test` — all unit tests
-5. `make build` — binary compiles
+5. `make build` — binary compiles (with version ldflags)
 6. `make tidy` — go.mod/go.sum are clean
 
 Fix all issues before committing. CI will reject the push otherwise.
+
+## Versioning and Releases
+
+- We follow [Semantic Versioning](https://semver.org/): `vMAJOR.MINOR.PATCH`
+  - PATCH: bug fixes, doc updates
+  - MINOR: new features (new engine browser, new command, etc.)
+  - MAJOR: breaking changes (config format change, removed flags, etc.)
+- Version info is embedded via `-ldflags` in `internal/version/version.go`
+- `make build` automatically injects version, commit, and date
+- To cut a release:
+  1. Update `CHANGELOG.md` — move items from `[Unreleased]` to a new version section
+  2. Commit the changelog
+  3. Run `make release VERSION_TAG=v0.X.0`
+- This pushes a git tag; GitHub Actions runs GoReleaser to produce:
+  - Cross-platform binaries (linux/darwin, amd64/arm64)
+  - Checksums file
+  - Docker images at `ghcr.io/miladbeigi/vaultui`
+  - GitHub Release with attached assets
+- GoReleaser config lives in `.goreleaser.yaml`; release workflow in `.github/workflows/release.yml`
 
 ## Committing
 
