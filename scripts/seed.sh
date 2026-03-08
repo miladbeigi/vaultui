@@ -68,10 +68,10 @@ vault kv put secret/infra/ssh/deploy-key \
 
 # ── Auth methods ───────────────────────────────────────────
 vault auth enable userpass
-vault write auth/userpass/users/testuser password=testpass policies=readonly,app-myapp
+vault write auth/userpass/users/testuser password=testpass policies=base-read,app-secrets
 
 vault auth enable approle
-vault write auth/approle/role/test-role token_ttl=1h token_max_ttl=4h policies=readonly
+vault write auth/approle/role/test-role token_ttl=1h token_max_ttl=4h policies=base-read,infra-secrets
 ROLE_ID=$(vault read -field=role_id auth/approle/role/test-role/role-id)
 vault write -f auth/approle/role/test-role/secret-id
 echo "AppRole role_id: $ROLE_ID"
@@ -79,9 +79,29 @@ echo "AppRole role_id: $ROLE_ID"
 vault auth enable -description="LDAP auth (unconfigured)" ldap
 
 # ── Policies ──────────────────────────────────────────────
-vault policy write readonly - <<'POLICY'
-path "secret/data/*" {
+
+# Shared base: lets any authenticated user see engines, auth, policies, health
+vault policy write base-read - <<'POLICY'
+path "sys/mounts" {
+  capabilities = ["read"]
+}
+path "sys/auth" {
+  capabilities = ["read"]
+}
+path "sys/policies/acl" {
   capabilities = ["read", "list"]
+}
+path "sys/policies/acl/*" {
+  capabilities = ["read"]
+}
+path "sys/health" {
+  capabilities = ["read"]
+}
+path "secret/metadata" {
+  capabilities = ["list"]
+}
+path "secret/metadata/*" {
+  capabilities = ["list"]
 }
 POLICY
 
@@ -91,19 +111,30 @@ path "*" {
 }
 POLICY
 
-vault policy write app-myapp - <<'POLICY'
-path "secret/data/apps/myapp/*" {
-  capabilities = ["read", "list"]
+# userpass: can only read app secrets (apps/myapp/*, apps/billing/*)
+vault policy write app-secrets - <<'POLICY'
+path "secret/data/apps/*" {
+  capabilities = ["read"]
 }
-path "secret/metadata/apps/myapp/*" {
+path "secret/metadata/apps/*" {
+  capabilities = ["list"]
+}
+POLICY
+
+# approle: can only read infra secrets (infra/tls/*, infra/aws, infra/ssh/*)
+vault policy write infra-secrets - <<'POLICY'
+path "secret/data/infra/*" {
+  capabilities = ["read"]
+}
+path "secret/metadata/infra/*" {
   capabilities = ["list"]
 }
 POLICY
 
 # ── Identity entities and groups ─────────────────────────
-vault write identity/entity name="test-user-entity" policies="readonly"
+vault write identity/entity name="test-user-entity" policies="base-read,app-secrets"
 vault write identity/entity name="admin-entity" policies="admin"
-vault write identity/group name="dev-team" policies="readonly" type="internal"
+vault write identity/group name="dev-team" policies="base-read,app-secrets" type="internal"
 vault write identity/group name="ops-team" policies="admin" type="internal"
 
 # ── PKI engine ───────────────────────────────────────────

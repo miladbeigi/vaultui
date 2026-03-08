@@ -224,7 +224,11 @@ func (v *DashboardView) renderQuickNav() string {
 		keyStyle.Render("[2]") + descStyle.Render(" Auth Methods") + gap +
 		keyStyle.Render("[3]") + descStyle.Render(" Policies")
 
-	return border.Render(row1)
+	row2 := keyStyle.Render("[4]") + descStyle.Render(" Identity") + gap +
+		keyStyle.Render("[5]") + descStyle.Render(" PKI") + gap +
+		keyStyle.Render("[6]") + descStyle.Render(" Transit")
+
+	return border.Render(lipgloss.JoinVertical(lipgloss.Left, row1, row2))
 }
 
 func (v *DashboardView) Title() string {
@@ -233,7 +237,7 @@ func (v *DashboardView) Title() string {
 
 func (v *DashboardView) KeyHints() []ui.KeyHint {
 	return []ui.KeyHint{
-		{Key: "1-3", Desc: "quick nav"},
+		{Key: "1-6", Desc: "quick nav"},
 		{Key: ":", Desc: "command"},
 		{Key: "q", Desc: "quit"},
 	}

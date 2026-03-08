@@ -119,8 +119,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Jump3):
 			cmd := m.router.ResetToRoot(views.NewPoliciesView(m.client))
 			return m, cmd
-		case key.Matches(msg, keys.Jump5):
+		case key.Matches(msg, keys.Jump4):
 			cmd := m.router.ResetToRoot(views.NewIdentityView(m.client))
+			return m, cmd
+		case key.Matches(msg, keys.Jump5):
+			cmd := m.router.ResetToRoot(views.NewPKIView(m.client, "pki/"))
+			return m, cmd
+		case key.Matches(msg, keys.Jump6):
+			cmd := m.router.ResetToRoot(views.NewTransitView(m.client, "transit/"))
 			return m, cmd
 		}
 	}
@@ -195,6 +201,12 @@ func (m Model) executeCommand() (tea.Model, tea.Cmd) {
 		return m, c
 	case "identity":
 		c := m.router.ResetToRoot(views.NewIdentityView(m.client))
+		return m, c
+	case "pki":
+		c := m.router.ResetToRoot(views.NewPKIView(m.client, "pki/"))
+		return m, c
+	case "transit":
+		c := m.router.ResetToRoot(views.NewTransitView(m.client, "transit/"))
 		return m, c
 	case "ctx", "contexts":
 		c := m.router.ResetToRoot(views.NewContextsView(m.cfg))

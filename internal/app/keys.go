@@ -96,9 +96,9 @@ func defaultKeyMap() KeyMap {
 		Jump1: key.NewBinding(key.WithKeys("1"), key.WithHelp("1", "secret engines")),
 		Jump2: key.NewBinding(key.WithKeys("2"), key.WithHelp("2", "auth methods")),
 		Jump3: key.NewBinding(key.WithKeys("3"), key.WithHelp("3", "policies")),
-		Jump4: key.NewBinding(key.WithKeys("4"), key.WithHelp("4", "leases")),
-		Jump5: key.NewBinding(key.WithKeys("5"), key.WithHelp("5", "identity")),
-		Jump6: key.NewBinding(key.WithKeys("6"), key.WithHelp("6", "sys/config")),
+		Jump4: key.NewBinding(key.WithKeys("4"), key.WithHelp("4", "identity")),
+		Jump5: key.NewBinding(key.WithKeys("5"), key.WithHelp("5", "pki")),
+		Jump6: key.NewBinding(key.WithKeys("6"), key.WithHelp("6", "transit")),
 	}
 }
 
