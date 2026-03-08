@@ -28,7 +28,7 @@ func newTestClient(t *testing.T) *vault.Client {
 
 func TestNew(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 
 	if m.client != client {
 		t.Error("expected model to hold the provided client")
@@ -49,7 +49,7 @@ func TestNew(t *testing.T) {
 
 func TestInit_ReturnsCmd(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 
 	cmd := m.Init()
 	if cmd == nil {
@@ -59,7 +59,7 @@ func TestInit_ReturnsCmd(t *testing.T) {
 
 func TestUpdate_WindowSizeMsg(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 
 	updated, cmd := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	model := updated.(Model)
@@ -80,7 +80,7 @@ func TestUpdate_WindowSizeMsg(t *testing.T) {
 
 func TestUpdate_HealthMsg_Success(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 
 	status := &vault.HealthStatus{
 		Initialized: true,
@@ -106,7 +106,7 @@ func TestUpdate_HealthMsg_Success(t *testing.T) {
 
 func TestUpdate_HealthMsg_Error(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 
 	err := errors.New("connection refused")
 	updated, _ := m.Update(healthMsg{err: err})
@@ -122,7 +122,7 @@ func TestUpdate_HealthMsg_Error(t *testing.T) {
 
 func TestUpdate_QuitKey(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 
 	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
 	model := updated.(Model)
@@ -137,7 +137,7 @@ func TestUpdate_QuitKey(t *testing.T) {
 
 func TestUpdate_ForceQuitKey(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 
 	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
 	model := updated.(Model)
@@ -152,7 +152,7 @@ func TestUpdate_ForceQuitKey(t *testing.T) {
 
 func TestUpdate_BackKey_RootView(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
 	model := updated.(Model)
@@ -164,7 +164,7 @@ func TestUpdate_BackKey_RootView(t *testing.T) {
 
 func TestView_NotReady(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 
 	view := m.View()
 	if view != "Initializing..." {
@@ -174,7 +174,7 @@ func TestView_NotReady(t *testing.T) {
 
 func TestView_Quitting(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 	m.ready = true
 	m.quitting = true
 
@@ -186,7 +186,7 @@ func TestView_Quitting(t *testing.T) {
 
 func TestView_Connected(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 	m.ready = true
 	m.width = 120
 	m.height = 40
@@ -215,7 +215,7 @@ func TestView_Connected(t *testing.T) {
 
 func TestView_Sealed(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 	m.ready = true
 	m.width = 120
 	m.height = 40
@@ -233,7 +233,7 @@ func TestView_Sealed(t *testing.T) {
 
 func TestView_Disconnected(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 	m.ready = true
 	m.width = 120
 	m.height = 40
@@ -250,7 +250,7 @@ func TestView_Disconnected(t *testing.T) {
 
 func TestView_Connecting(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 	m.ready = true
 	m.width = 120
 	m.height = 40
@@ -263,7 +263,7 @@ func TestView_Connecting(t *testing.T) {
 
 func TestView_StatusBarFromCurrentView(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 	m.ready = true
 	m.width = 120
 	m.height = 40
@@ -279,7 +279,7 @@ func TestView_StatusBarFromCurrentView(t *testing.T) {
 
 func TestCommandPalette_Open(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 	m.ready = true
 	m.width = 120
 	m.height = 40
@@ -297,7 +297,7 @@ func TestCommandPalette_Open(t *testing.T) {
 
 func TestCommandPalette_Close(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 	m.cmdActive = true
 	m.cmdInput = "foo"
 
@@ -314,7 +314,7 @@ func TestCommandPalette_Close(t *testing.T) {
 
 func TestCommandPalette_TypeAndBackspace(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 	m.cmdActive = true
 
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
@@ -338,7 +338,7 @@ func TestCommandPalette_TypeAndBackspace(t *testing.T) {
 
 func TestCommandPalette_ExecuteSecrets(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 	m.cmdActive = true
 	m.cmdInput = "secrets"
 
@@ -358,7 +358,7 @@ func TestCommandPalette_ExecuteSecrets(t *testing.T) {
 
 func TestCommandPalette_ExecuteQuit(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 	m.cmdActive = true
 	m.cmdInput = "q"
 
@@ -375,7 +375,7 @@ func TestCommandPalette_ExecuteQuit(t *testing.T) {
 
 func TestCommandPalette_UnknownCommand(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 	m.cmdActive = true
 	m.cmdInput = "nope"
 
@@ -392,7 +392,7 @@ func TestCommandPalette_UnknownCommand(t *testing.T) {
 
 func TestCommandPalette_RenderedInBody(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 	m.ready = true
 	m.width = 120
 	m.height = 40
@@ -407,7 +407,7 @@ func TestCommandPalette_RenderedInBody(t *testing.T) {
 
 func TestCommandPalette_KeysDontLeakToView(t *testing.T) {
 	client := newTestClient(t)
-	m := New(client, nil, "")
+	m := New(client, nil, "", "")
 	m.cmdActive = true
 	m.cmdInput = ""
 

@@ -3,10 +3,11 @@ package vault
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
-	"net/http"
+	"io"
+	"os"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -61,58 +62,87 @@ func (c *Client) ListAuditDevices() ([]AuditDevice, error) {
 	return devices, nil
 }
 
-// LogEntry represents a single line from the Vault server log stream.
-type LogEntry struct {
-	Timestamp time.Time
-	Level     string
-	Message   string
-	Raw       string
+// AuditEntry represents a parsed audit log entry from Vault.
+type AuditEntry struct {
+	Time      time.Time
+	Type      string // "request" or "response"
+	Operation string
+	Path      string
+	SourceIP  string
+	Error     string
 }
 
-// MonitorLogs connects to the sys/monitor endpoint and streams log entries.
-// The returned channel emits parsed log entries until the context is cancelled.
-func (c *Client) MonitorLogs(ctx context.Context, level string) (<-chan LogEntry, error) {
-	if level == "" {
-		level = "info"
-	}
+// rawAuditEntry is the JSON structure of a Vault audit log line.
+type rawAuditEntry struct {
+	Time    string `json:"time"`
+	Type    string `json:"type"`
+	Request struct {
+		Operation     string `json:"operation"`
+		Path          string `json:"path"`
+		RemoteAddress string `json:"remote_address"`
+	} `json:"request"`
+	Response struct {
+	} `json:"response"`
+	Error string `json:"error"`
+}
 
-	addr := c.raw.Address()
-	url := addr + "/v1/sys/monitor?log_level=" + level
-	if fmt := ""; fmt != "" {
-		url += "&log_format=" + fmt
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+// AuditLogFilePath returns the file path of the first file-type audit device,
+// or empty string if none is configured.
+func (c *Client) AuditLogFilePath() string {
+	devices, err := c.ListAuditDevices()
 	if err != nil {
-		return nil, fmt.Errorf("creating monitor request: %w", err)
+		return ""
 	}
-	req.Header.Set("X-Vault-Token", c.raw.Token())
-	if ns := c.raw.Headers().Get("X-Vault-Namespace"); ns != "" {
-		req.Header.Set("X-Vault-Namespace", ns)
+	for _, d := range devices {
+		if d.Type == "file" && d.Options != nil {
+			if fp, ok := d.Options["file_path"]; ok && fp != "stdout" && fp != "stderr" {
+				return fp
+			}
+		}
 	}
+	return ""
+}
 
-	resp, err := http.DefaultClient.Do(req)
+// TailAuditLog opens the audit log file and streams new entries as they appear.
+// It seeks to the end of the file and only reads new entries.
+func TailAuditLog(ctx context.Context, filePath string) (<-chan AuditEntry, error) {
+	f, err := os.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("connecting to monitor: %w", err)
+		return nil, fmt.Errorf("opening audit log %q: %w", filePath, err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
-		return nil, fmt.Errorf("monitor returned status %d", resp.StatusCode)
+	if _, err := f.Seek(0, io.SeekEnd); err != nil {
+		f.Close()
+		return nil, fmt.Errorf("seeking to end of audit log: %w", err)
 	}
 
-	ch := make(chan LogEntry, 64)
+	ch := make(chan AuditEntry, 64)
 	go func() {
-		defer resp.Body.Close()
+		defer f.Close()
 		defer close(ch)
 
-		scanner := bufio.NewScanner(resp.Body)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if line == "" {
+		reader := bufio.NewReader(f)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
+			line, err := reader.ReadBytes('\n')
+			if err != nil {
+				if err == io.EOF {
+					time.Sleep(200 * time.Millisecond)
+					continue
+				}
+				return
+			}
+
+			entry, ok := parseAuditJSON(line)
+			if !ok {
 				continue
 			}
-			entry := parseLogLine(line)
+
 			select {
 			case ch <- entry:
 			case <-ctx.Done():
@@ -124,28 +154,21 @@ func (c *Client) MonitorLogs(ctx context.Context, level string) (<-chan LogEntry
 	return ch, nil
 }
 
-// parseLogLine extracts timestamp, level, and message from a Vault log line.
-// Vault dev log format: "2025-01-15T10:30:00.000Z [INFO]  core: message here"
-func parseLogLine(line string) LogEntry {
-	entry := LogEntry{Raw: line}
-
-	bracketStart := strings.Index(line, "[")
-	bracketEnd := strings.Index(line, "]")
-	if bracketStart >= 0 && bracketEnd > bracketStart {
-		if bracketStart > 0 {
-			ts := strings.TrimSpace(line[:bracketStart])
-			entry.Timestamp, _ = time.Parse("2006-01-02T15:04:05.000Z", ts)
-			if entry.Timestamp.IsZero() {
-				entry.Timestamp, _ = time.Parse(time.RFC3339, ts)
-			}
-		}
-		entry.Level = strings.TrimSpace(line[bracketStart+1 : bracketEnd])
-		if bracketEnd+1 < len(line) {
-			entry.Message = strings.TrimSpace(line[bracketEnd+1:])
-		}
-	} else {
-		entry.Message = line
+func parseAuditJSON(data []byte) (AuditEntry, bool) {
+	var raw rawAuditEntry
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return AuditEntry{}, false
 	}
 
-	return entry
+	entry := AuditEntry{
+		Type:      raw.Type,
+		Operation: raw.Request.Operation,
+		Path:      raw.Request.Path,
+		SourceIP:  raw.Request.RemoteAddress,
+		Error:     raw.Error,
+	}
+
+	entry.Time, _ = time.Parse(time.RFC3339Nano, raw.Time)
+
+	return entry, true
 }

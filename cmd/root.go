@@ -14,16 +14,17 @@ import (
 )
 
 var (
-	cfgFile    string
-	vaultAddr  string
-	token      string
-	namespace  string
-	authMethod string
-	username   string
-	password   string
-	roleID     string
-	secretID   string
-	authMount  string
+	cfgFile      string
+	vaultAddr    string
+	token        string
+	namespace    string
+	authMethod   string
+	username     string
+	password     string
+	roleID       string
+	secretID     string
+	authMount    string
+	auditLogPath string
 )
 
 var rootCmd = &cobra.Command{
@@ -60,7 +61,12 @@ and leases — all without leaving the terminal.`,
 		cfg, _ := config.Load(viper.GetString("config"))
 		app.ApplyKeybindings(cfg.Settings.Keybindings)
 
-		model := app.New(vc, cfg, viper.GetString("config"))
+		auditPath := viper.GetString("audit-log")
+		if auditPath == "" {
+			auditPath = vc.AuditLogFilePath()
+		}
+
+		model := app.New(vc, cfg, viper.GetString("config"), auditPath)
 		p := tea.NewProgram(model, tea.WithAltScreen())
 		if _, err := p.Run(); err != nil {
 			return fmt.Errorf("failed to run vaultui: %w", err)
@@ -88,6 +94,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&password, "password", "", "Password for userpass auth")
 	rootCmd.PersistentFlags().StringVar(&roleID, "role-id", "", "Role ID for AppRole auth")
 	rootCmd.PersistentFlags().StringVar(&secretID, "secret-id", "", "Secret ID for AppRole auth")
+	rootCmd.PersistentFlags().StringVar(&auditLogPath, "audit-log", "", "Path to Vault audit log file for live tailing")
 
 	_ = viper.BindPFlag("vault.address", rootCmd.PersistentFlags().Lookup("vault-addr"))
 	_ = viper.BindPFlag("vault.token", rootCmd.PersistentFlags().Lookup("token"))
@@ -98,6 +105,7 @@ func init() {
 	_ = viper.BindPFlag("auth.password", rootCmd.PersistentFlags().Lookup("password"))
 	_ = viper.BindPFlag("auth.role-id", rootCmd.PersistentFlags().Lookup("role-id"))
 	_ = viper.BindPFlag("auth.secret-id", rootCmd.PersistentFlags().Lookup("secret-id"))
+	_ = viper.BindPFlag("audit-log", rootCmd.PersistentFlags().Lookup("audit-log"))
 }
 
 func initConfig() {

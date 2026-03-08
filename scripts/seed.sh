@@ -5,7 +5,7 @@ set -e
 
 sleep 2
 
-vault audit enable file file_path=stdout
+vault audit enable file file_path=/vault/audit/audit.log
 
 # ── App secrets (typical web app config) ──────────────────
 # Version 1

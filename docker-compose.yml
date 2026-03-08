@@ -12,6 +12,8 @@ services:
       - IPC_LOCK
     tmpfs:
       - /vault/data
+    volumes:
+      - ./tmp/audit:/vault/audit
 
   seed:
     image: hashicorp/vault:1.15
@@ -38,3 +40,4 @@ services:
     tty: true
     profiles:
       - ui
+

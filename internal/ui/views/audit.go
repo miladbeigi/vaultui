@@ -20,29 +20,32 @@ type auditDevicesMsg struct {
 	err     error
 }
 
-type logEntryMsg vault.LogEntry
-type logStreamErrMsg struct{ err error }
-
-// AuditView displays live Vault server logs and audit device configuration.
-type AuditView struct {
-	client  *vault.Client
-	tab     int // 0 = log stream, 1 = devices
-	devices []vault.AuditDevice
-	devErr  error
-
-	entries  []vault.LogEntry
-	scroll   int
-	paused   bool
-	cancel   context.CancelFunc
-	logCh    <-chan vault.LogEntry
-	logErr   error
-	logLevel string
-
-	devTable *components.Table
-	loading  bool
+type auditEntryMsg vault.AuditEntry
+type auditStreamErrMsg struct{ err error }
+type auditStreamConnectedMsg struct {
+	ch <-chan vault.AuditEntry
 }
 
-const maxLogEntries = 500
+// AuditView displays live Vault audit log entries and audit device configuration.
+type AuditView struct {
+	client   *vault.Client
+	logPath  string
+	tab      int // 0 = audit log, 1 = devices
+	devices  []vault.AuditDevice
+	devErr   error
+	devTable *components.Table
+	loading  bool
+
+	entries   []vault.AuditEntry
+	scroll    int
+	paused    bool
+	connected bool
+	cancel    context.CancelFunc
+	logCh     <-chan vault.AuditEntry
+	logErr    error
+}
+
+const maxAuditEntries = 500
 
 var _ ui.View = (*AuditView)(nil)
 
@@ -53,17 +56,18 @@ var auditDeviceColumns = []components.Column{
 }
 
 // NewAuditView creates the audit log / devices browser.
-func NewAuditView(client *vault.Client) *AuditView {
+// logPath is the path to the audit log file on the local filesystem.
+func NewAuditView(client *vault.Client, logPath string) *AuditView {
 	return &AuditView{
 		client:   client,
+		logPath:  logPath,
 		devTable: components.NewTable(auditDeviceColumns),
 		loading:  true,
-		logLevel: "info",
 	}
 }
 
 func (v *AuditView) Init() tea.Cmd {
-	return tea.Batch(v.fetchDevices, v.startLogStream())
+	return tea.Batch(v.fetchDevices, v.startTail())
 }
 
 func (v *AuditView) fetchDevices() tea.Msg {
@@ -71,35 +75,33 @@ func (v *AuditView) fetchDevices() tea.Msg {
 	return auditDevicesMsg{devices: devices, err: err}
 }
 
-func (v *AuditView) startLogStream() tea.Cmd {
+func (v *AuditView) startTail() tea.Cmd {
+	if v.logPath == "" {
+		return func() tea.Msg {
+			return auditStreamErrMsg{err: fmt.Errorf("no audit log file configured (set --audit-log or configure a file audit device)")}
+		}
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	v.cancel = cancel
 
+	logPath := v.logPath
 	return func() tea.Msg {
-		ch, err := v.client.MonitorLogs(ctx, v.logLevel)
+		ch, err := vault.TailAuditLog(ctx, logPath)
 		if err != nil {
-			return logStreamErrMsg{err: err}
+			return auditStreamErrMsg{err: err}
 		}
-		entry, ok := <-ch
-		if !ok {
-			return logStreamErrMsg{err: fmt.Errorf("log stream closed")}
-		}
-		return initLogStreamMsg{ch: ch, first: entry}
+		return auditStreamConnectedMsg{ch: ch}
 	}
 }
 
-type initLogStreamMsg struct {
-	ch    <-chan vault.LogEntry
-	first vault.LogEntry
-}
-
-func waitForLog(ch <-chan vault.LogEntry) tea.Cmd {
+func waitForAuditEntry(ch <-chan vault.AuditEntry) tea.Cmd {
 	return func() tea.Msg {
 		entry, ok := <-ch
 		if !ok {
-			return logStreamErrMsg{err: fmt.Errorf("log stream closed")}
+			return auditStreamErrMsg{err: fmt.Errorf("audit log stream closed")}
 		}
-		return logEntryMsg(entry)
+		return auditEntryMsg(entry)
 	}
 }
 
@@ -112,16 +114,16 @@ func (v *AuditView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		v.rebuildDeviceTable()
 		return v, nil
 
-	case initLogStreamMsg:
+	case auditStreamConnectedMsg:
 		v.logCh = msg.ch
-		v.appendEntry(vault.LogEntry(msg.first))
-		return v, waitForLog(msg.ch)
+		v.connected = true
+		return v, waitForAuditEntry(msg.ch)
 
-	case logEntryMsg:
-		v.appendEntry(vault.LogEntry(msg))
-		return v, waitForLog(v.logCh)
+	case auditEntryMsg:
+		v.appendEntry(vault.AuditEntry(msg))
+		return v, waitForAuditEntry(v.logCh)
 
-	case logStreamErrMsg:
+	case auditStreamErrMsg:
 		v.logErr = msg.err
 		return v, nil
 
@@ -181,13 +183,13 @@ func (v *AuditView) handleDeviceKeys(msg tea.KeyMsg) tea.Cmd {
 	return nil
 }
 
-func (v *AuditView) appendEntry(entry vault.LogEntry) {
+func (v *AuditView) appendEntry(entry vault.AuditEntry) {
 	if v.paused {
 		return
 	}
 	v.entries = append(v.entries, entry)
-	if len(v.entries) > maxLogEntries {
-		v.entries = v.entries[len(v.entries)-maxLogEntries:]
+	if len(v.entries) > maxAuditEntries {
+		v.entries = v.entries[len(v.entries)-maxAuditEntries:]
 	}
 	v.scroll = len(v.entries)
 }
@@ -203,7 +205,7 @@ func (v *AuditView) rebuildDeviceTable() {
 const auditTitleHeight = 2
 
 func (v *AuditView) View(width, height int) string {
-	tabNames := []string{"Log Stream", "Devices"}
+	tabNames := []string{"Audit Log", "Devices"}
 	tabs := ""
 	for i, name := range tabNames {
 		if i == v.tab {
@@ -222,7 +224,7 @@ func (v *AuditView) View(width, height int) string {
 
 	var body string
 	if v.tab == 0 {
-		body = v.renderLogStream(width, bodyHeight)
+		body = v.renderAuditLog(width, bodyHeight)
 	} else {
 		body = v.renderDevices(width, bodyHeight)
 	}
@@ -230,14 +232,20 @@ func (v *AuditView) View(width, height int) string {
 	return lipgloss.JoinVertical(lipgloss.Left, title, body)
 }
 
-func (v *AuditView) renderLogStream(width, height int) string {
+func (v *AuditView) renderAuditLog(width, height int) string {
 	if v.logErr != nil {
 		return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center,
-			styles.ErrorStyle.Render("Log stream error: "+v.logErr.Error()))
+			styles.ErrorStyle.Render("Audit log error: "+v.logErr.Error()))
 	}
 
 	if len(v.entries) == 0 {
-		status := styles.SubtleStyle.Render("Waiting for log entries...")
+		var status string
+		if v.connected {
+			status = styles.SuccessStyle.Render("● Connected") + "  " +
+				styles.SubtleStyle.Render("Waiting for audit events...")
+		} else {
+			status = styles.SubtleStyle.Render("Connecting to audit log...")
+		}
 		return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, status)
 	}
 
@@ -255,7 +263,7 @@ func (v *AuditView) renderLogStream(width, height int) string {
 
 	var lines []string
 	for _, entry := range v.entries[start:end] {
-		lines = append(lines, renderLogEntry(entry, width))
+		lines = append(lines, renderAuditEntry(entry, width))
 	}
 
 	for len(lines) < logHeight {
@@ -266,30 +274,33 @@ func (v *AuditView) renderLogStream(width, height int) string {
 	return lipgloss.JoinVertical(lipgloss.Left, logContent, statusLine)
 }
 
-func renderLogEntry(entry vault.LogEntry, width int) string {
-	levelStyle := styles.SubtleStyle
-	switch strings.ToUpper(entry.Level) {
-	case "ERROR":
-		levelStyle = styles.ErrorStyle
-	case "WARN":
-		levelStyle = lipgloss.NewStyle().Foreground(styles.SecondaryColor)
-	case "INFO":
-		levelStyle = styles.SuccessStyle
-	case "DEBUG":
-		levelStyle = styles.SubtleStyle
-	case "TRACE":
-		levelStyle = lipgloss.NewStyle().Foreground(styles.DimTextColor)
+func renderAuditEntry(entry vault.AuditEntry, width int) string {
+	ts := styles.SubtleStyle.Render(entry.Time.Format("15:04:05"))
+
+	typeStyle := styles.SubtleStyle
+	switch entry.Type {
+	case "request":
+		typeStyle = lipgloss.NewStyle().Foreground(styles.SecondaryColor)
+	case "response":
+		typeStyle = styles.SuccessStyle
+	}
+	entryType := typeStyle.Render(fmt.Sprintf("%-4s", entry.Type[:3]))
+
+	opStyle := lipgloss.NewStyle().Foreground(styles.TextColor)
+	switch entry.Operation {
+	case "create", "update", "delete":
+		opStyle = lipgloss.NewStyle().Foreground(styles.SecondaryColor).Bold(true)
+	}
+	op := opStyle.Render(fmt.Sprintf("%-8s", entry.Operation))
+
+	path := lipgloss.NewStyle().Foreground(styles.TextColor).Render(entry.Path)
+
+	line := ts + " " + entryType + " " + op + " " + path
+
+	if entry.Error != "" {
+		line += " " + styles.ErrorStyle.Render(entry.Error)
 	}
 
-	var ts string
-	if !entry.Timestamp.IsZero() {
-		ts = styles.SubtleStyle.Render(entry.Timestamp.Format("15:04:05")) + " "
-	}
-
-	level := levelStyle.Render(fmt.Sprintf("%-5s", entry.Level))
-	msg := lipgloss.NewStyle().Foreground(styles.TextColor).Render(entry.Message)
-
-	line := ts + level + " " + msg
 	if lipgloss.Width(line) > width {
 		line = line[:width]
 	}
@@ -306,8 +317,6 @@ func (v *AuditView) renderLogStatus() string {
 	} else {
 		parts = append(parts, styles.SuccessStyle.Render("LIVE"))
 	}
-
-	parts = append(parts, styles.SubtleStyle.Render("level:"+v.logLevel))
 
 	return strings.Join(parts, "  ")
 }
@@ -349,12 +358,12 @@ func (v *AuditView) KeyHints() []ui.KeyHint {
 	}
 	return []ui.KeyHint{
 		{Key: "↑↓", Desc: "navigate"},
-		{Key: "tab", Desc: "log stream"},
+		{Key: "tab", Desc: "audit log"},
 		{Key: "esc", Desc: "back"},
 	}
 }
 
-// Cleanup stops the log stream when leaving the view.
+// Cleanup stops the audit log tail when leaving the view.
 func (v *AuditView) Cleanup() {
 	if v.cancel != nil {
 		v.cancel()
