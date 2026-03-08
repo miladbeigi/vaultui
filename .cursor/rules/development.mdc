@@ -1,0 +1,100 @@
+---
+description: Development lifecycle for VaultUI — environment setup, coding patterns, testing, CI, and committing.
+globs:
+alwaysApply: true
+---
+
+# VaultUI Development Lifecycle
+
+## Environment Setup
+
+- Go 1.25+ required (`go version` to check)
+- Install golangci-lint: `go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest`
+- Start the local Vault dev server with seed data:
+  ```
+  docker compose up -d
+  ```
+- Vault is at `http://127.0.0.1:8200` with root token `root`
+- Verify seed completed: `docker compose logs seed | tail -1` should show "Seed data loaded successfully."
+
+## Running the App
+
+- Quick run: `VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=root go run .`
+- Config file: `~/.vaultui.yaml` supports multiple Vault contexts
+- CLI flags: `--vault-addr`, `--token`, `--namespace`, `--config`
+- Context switching inside the TUI: `:ctx` command
+
+## Making Changes
+
+### Vault API methods (`internal/vault/`)
+- One file per engine/feature (e.g., `secrets.go`, `pki.go`, `transit.go`, `identity.go`)
+- Wrap errors with `fmt.Errorf("context: %w", err)`
+- Use the cache for list operations: `c.cache.Get(key)` / `c.cache.Set(key, value)`
+- Return typed structs, not raw `map[string]interface{}`
+
+### TUI views (`internal/ui/views/`)
+- Every view implements the `ui.View` interface: `Init()`, `Update()`, `View()`, `Title()`, `KeyHints()`
+- Use `navKeys` (defined in `engines.go`) for keyboard navigation bindings
+- Use the `components.Table` for list views and `components.Breadcrumb` for path-based views
+- Never inline Lipgloss colors — always use `styles.*` from `internal/ui/styles/theme.go`
+
+### Wiring new views
+- Add `:command` in `internal/app/app.go` `executeCommand()` method
+- Add jump key in `internal/app/keys.go` if it deserves a number shortcut
+- Handle the jump key in `app.go` `Update()` under the `tea.KeyMsg` switch
+- Update the dashboard quick nav in `internal/ui/views/dashboard.go` `renderQuickNav()`
+
+### Seed data (`scripts/seed.sh`)
+- Add test data for every new feature so it can be tested locally
+- After changing seed: `docker compose down && docker compose up -d vault seed`
+- Wait a few seconds, then verify: `docker compose logs seed | tail -1`
+
+## Testing
+
+- Write unit tests for every new view and API method
+- Test files live next to source: `foo_test.go` alongside `foo.go`
+- Use the `newTestClient(t)` helper (defined in `engines_test.go`) for view tests
+- Cover these states for every view: loading, loaded with data, error, empty, keyboard interactions
+- Run tests: `make test` or `go test ./...`
+- Run a specific package: `go test -v ./internal/ui/views/ -run TestName`
+
+## Pre-Commit Checks
+
+Always run before committing:
+```
+make ci
+```
+This runs all 6 checks that match GitHub Actions CI exactly:
+1. `make fmt` — gofmt formatting
+2. `make vet` — go vet static analysis
+3. `make lint` — golangci-lint
+4. `make test` — all unit tests
+5. `make build` — binary compiles
+6. `make tidy` — go.mod/go.sum are clean
+
+Fix all issues before committing. CI will reject the push otherwise.
+
+## Committing
+
+- Message style: verb + what changed ("Add X browser", "Fix Y navigation", "Remove Z feature")
+- Use HEREDOC for multi-line messages:
+  ```
+  git commit -m "$(cat <<'EOF'
+  Summary line here
+
+  Optional body with details.
+  EOF
+  )"
+  ```
+- Push after each logical unit of work
+- Run `make ci` before every commit
+
+## Key Project Conventions
+
+- `docs/DESIGN.md` is the source of truth for the roadmap and phase plan
+- All Vault API methods go in `internal/vault/` with caching
+- All UI views implement `ui.View` and go in `internal/ui/views/`
+- Reusable UI components go in `internal/ui/components/`
+- Navigation uses a stack-based router (`internal/app/router.go`) — Push/Pop/ResetToRoot
+- The command palette (`:` prefix) is handled in `app.go` `executeCommand()`
+- Jump keys (1-6) are defined in `keys.go` and handled in `app.go` `Update()`

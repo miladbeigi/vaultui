@@ -3,27 +3,24 @@
 ## Prerequisites
 
 - **Go 1.25+** — [install instructions](https://go.dev/doc/install)
+- **golangci-lint** — [install instructions](https://golangci-lint.run/welcome/install/)
 - A terminal emulator with true-color support (iTerm2, Ghostty, Alacritty, kitty, etc.)
-- (Optional) A running HashiCorp Vault instance for live testing
+- (Optional) Docker & Docker Compose for the local Vault dev environment
 
 ## Getting Started
 
 Clone the repo and install dependencies:
 
 ```sh
-git clone <repo-url> && cd vaultui
+git clone https://github.com/miladbeigi/vaultui.git && cd vaultui
 go mod download
 ```
 
 ## Build
 
-Build the binary into the current directory:
-
 ```sh
 go build -o vaultui .
 ```
-
-The resulting `vaultui` binary is a standalone executable.
 
 ## Run
 
@@ -39,29 +36,63 @@ go run .
 |---|---|---|
 | `--vault-addr` | Vault server address | `VAULT_ADDR` |
 | `--token` | Vault authentication token | `VAULT_TOKEN` |
-| `--namespace` | Vault namespace | `VAULT_NAMESPACE` |
+| `--namespace` | Vault namespace (Enterprise) | `VAULT_NAMESPACE` |
 | `--config` | Path to config file (default `~/.vaultui.yaml`) | — |
+| `--auth-method` | Auth method: `token`, `userpass`, `approle` | — |
+| `--auth-mount` | Custom mount path for auth method | — |
+| `--username` | Username for userpass auth | — |
+| `--password` | Password for userpass auth | — |
+| `--role-id` | Role ID for AppRole auth | — |
+| `--secret-id` | Secret ID for AppRole auth | — |
 
 Examples:
 
 ```sh
 # Using flags
-go run . --vault-addr=http://127.0.0.1:8200 --token=hvs.xxxxx
+go run . --vault-addr=http://127.0.0.1:8200 --token=root
 
 # Using environment variables
 export VAULT_ADDR=http://127.0.0.1:8200
-export VAULT_TOKEN=hvs.xxxxx
+export VAULT_TOKEN=root
 go run .
+
+# With userpass auth
+go run . --vault-addr=http://127.0.0.1:8200 --auth-method=userpass --username=testuser --password=testpass
+
+# With AppRole auth
+go run . --vault-addr=http://127.0.0.1:8200 --auth-method=approle --role-id=xxx --secret-id=yyy
 
 # Using a custom config file
 go run . --config=./my-config.yaml
 ```
+
+## Local CI
+
+The project includes a `Makefile` that mirrors the GitHub Actions CI pipeline. Run all checks locally before pushing:
+
+```sh
+make ci
+```
+
+Individual targets:
+
+| Target | Description |
+|--------|-------------|
+| `make fmt` | Check `gofmt` formatting |
+| `make vet` | Run `go vet` static analysis |
+| `make lint` | Run `golangci-lint` |
+| `make test` | Run `go test ./...` |
+| `make build` | Build the binary |
+| `make tidy` | Check `go.mod` / `go.sum` tidiness |
+| `make clean` | Remove the built binary |
 
 ## Test
 
 Run all tests:
 
 ```sh
+make test
+# or
 go test ./...
 ```
 
@@ -76,6 +107,7 @@ Run tests for a specific package:
 ```sh
 go test -v ./internal/app/...
 go test -v ./internal/vault/...
+go test -v ./internal/ui/views/...
 ```
 
 Run tests with race detection:
@@ -91,46 +123,38 @@ go test -coverprofile=coverage.out ./...
 go tool cover -html=coverage.out -o coverage.html
 ```
 
-## Lint / Vet
-
-Run the built-in Go static analysis:
-
-```sh
-go vet ./...
-```
-
-If you have [golangci-lint](https://golangci-lint.run/) installed:
-
-```sh
-golangci-lint run
-```
-
 ## Project Structure
 
 ```
 vaultui/
-├── main.go                 # Entrypoint
+├── main.go                       # Entrypoint
 ├── cmd/
-│   └── root.go             # Cobra CLI, flag parsing, config loading
+│   ├── root.go                   # Cobra CLI, flag parsing, config loading
+│   └── get.go                    # Headless `vaultui get` subcommand
 ├── internal/
-│   ├── app/                # Top-level Bubble Tea model, keybindings
+│   ├── app/                      # Top-level Bubble Tea model, router, keybindings
+│   ├── clipboard/                # Cross-platform clipboard with auto-clear
+│   ├── config/                   # YAML config loader (~/.vaultui.yaml)
 │   ├── ui/
-│   │   ├── styles/         # Lipgloss theme and style definitions
-│   │   ├── components/     # Reusable UI components (table, breadcrumb, statusbar, etc.)
-│   │   └── views/          # Screen views (dashboard, engines, path browser, etc.)
-│   └── vault/              # Vault API client wrapper, caching, operations
-├── config/                 # Viper config loader
-├── pkg/
-│   ├── clipboard/          # Cross-platform clipboard support
-│   └── format/             # Duration, time, JSON formatters
-└── docs/                   # Project documentation
+│   │   ├── styles/               # Lipgloss color palette and style definitions
+│   │   ├── components/           # Reusable UI components (table, breadcrumb)
+│   │   └── views/                # Screen views (dashboard, engines, secrets, etc.)
+│   └── vault/                    # Vault API client, caching, auth, engine methods
+├── scripts/
+│   └── seed.sh                   # Test data seed script for local dev
+├── docs/
+│   ├── DESIGN.md                 # Design document and roadmap
+│   └── development.md            # This file
+├── Makefile                      # Local CI runner
+├── Dockerfile                    # Multi-stage build from local source
+└── docker-compose.yml            # Local Vault dev environment
 ```
 
 ## Local Vault for Testing
 
 ### Docker Compose (recommended)
 
-The project includes a `docker-compose.yml` that starts a dev Vault server with audit logging and seeds it with realistic test data:
+The project includes a `docker-compose.yml` that starts a dev Vault server and seeds it with realistic test data:
 
 ```sh
 # Start Vault and seed test data
@@ -139,20 +163,21 @@ docker compose up -d
 # Run vaultui against it
 VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=root go run .
 
-# Watch Vault audit logs (every API request)
-docker compose logs -f vault
-
 # Tear down when done
 docker compose down
 ```
 
-The seed container populates a KV v2 engine with this structure:
+### Seed Data
+
+The seed script (`scripts/seed.sh`) populates:
+
+**KV v2 secrets** (with multiple versions for diff testing):
 
 ```
 secret/
 ├── apps/
 │   ├── myapp/
-│   │   ├── config       (db credentials)
+│   │   ├── config       (db credentials — 3 versions for history/diff)
 │   │   ├── database     (connection string)
 │   │   └── api-keys     (stripe, sendgrid)
 │   └── billing/
@@ -160,7 +185,59 @@ secret/
 └── infra/
     ├── tls/
     │   └── wildcard     (cert + key)
-    └── aws              (access keys)
+    ├── aws              (access keys)
+    └── ssh/
+        └── deploy-key   (SSH keypair)
+```
+
+**Auth methods:**
+
+- `userpass` — user `testuser` / password `testpass` (policies: `base-read`, `app-secrets`)
+- `approle` — role `test-role` (policies: `base-read`, `infra-secrets`)
+- `ldap` — enabled but unconfigured (for UI display)
+
+**Policies:**
+
+| Policy | Access |
+|--------|--------|
+| `base-read` | `sys/mounts`, `sys/auth`, `sys/policies`, `sys/health`, `secret/metadata` |
+| `admin` | Full `*` access |
+| `app-secrets` | Read `secret/data/apps/*`, list `secret/metadata/apps/*` |
+| `infra-secrets` | Read `secret/data/infra/*`, list `secret/metadata/infra/*` |
+
+**PKI engine:**
+
+- Root CA ("Test Root CA")
+- Role `test-role` (allowed domain: `test.example.com`)
+- Issued certificate (`app1.test.example.com`)
+
+**Transit engine:**
+
+- Key `my-app-key` (default type)
+- Key `payment-key` (aes256-gcm96)
+
+**Identity:**
+
+- Entities: `test-user-entity`, `admin-entity`
+- Groups: `dev-team`, `ops-team`
+
+### Testing Auth Methods
+
+After `docker compose up -d`:
+
+```sh
+# Root token (full access)
+VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=root go run .
+
+# Userpass (restricted to app secrets)
+go run . --vault-addr=http://127.0.0.1:8200 \
+  --auth-method=userpass --username=testuser --password=testpass
+
+# AppRole (restricted to infra secrets)
+ROLE_ID=$(docker compose exec vault vault read -field=role_id auth/approle/role/test-role/role-id)
+SECRET_ID=$(docker compose exec vault vault write -f -field=secret_id auth/approle/role/test-role/secret-id)
+go run . --vault-addr=http://127.0.0.1:8200 \
+  --auth-method=approle --role-id=$ROLE_ID --secret-id=$SECRET_ID
 ```
 
 ### Manual (without Docker)
@@ -178,3 +255,26 @@ export VAULT_ADDR=http://127.0.0.1:8200
 export VAULT_TOKEN=root
 go run .
 ```
+
+## Headless Mode
+
+The `vaultui get` subcommand outputs JSON for scripting:
+
+```sh
+vaultui get health                      # Vault health status
+vaultui get engines                     # List secret engines
+vaultui get auth                        # List auth methods
+vaultui get policies                    # List policies
+vaultui get secret secret/apps/myapp/config  # Read a secret
+vaultui get policy admin                # Read a policy body
+```
+
+## Coding Conventions
+
+- Every new Vault API method goes in `internal/vault/` and includes caching where appropriate.
+- Every new TUI view implements the `ui.View` interface and goes in `internal/ui/views/`.
+- Views are wired in `internal/app/app.go` (router push, commands, jump keys).
+- New secret engines are routed from `engines.go` via type check in `handleEnter`.
+- Unit tests sit next to the code they test (`_test.go` suffix).
+- Run `make ci` before committing to catch formatting, lint, and test issues.
+- Use `gofmt` formatting — no exceptions.

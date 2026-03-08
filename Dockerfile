@@ -1,6 +1,10 @@
 FROM golang:1.25-alpine AS build
-RUN apk add --no-cache git && CGO_ENABLED=0 go install github.com/miladbeigi/vaultui@latest
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -o /vaultui .
 
 FROM alpine:3.21
-COPY --from=build /go/bin/vaultui /usr/local/bin/vaultui
+COPY --from=build /vaultui /usr/local/bin/vaultui
 ENTRYPOINT ["vaultui"]
