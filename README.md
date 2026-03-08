@@ -29,25 +29,45 @@ Browse secrets, auth methods, policies, and more — without leaving your termin
 - **Vim-style navigation** — `j`/`k`, `g`/`G`, `Ctrl+D`/`Ctrl+U`, `Enter`, `Esc`
 - **Stack-based routing** — every view preserves scroll position and state
 
-## Quick Start
+## Install
 
-### Prerequisites
+### Binary (recommended)
 
-- Go 1.25+
-- A running Vault instance (or use the bundled dev setup below)
+Download a pre-built binary from the [latest release](https://github.com/miladbeigi/vaultui/releases/latest):
 
-### Install
+```bash
+# macOS (Apple Silicon)
+curl -Lo vaultui.tar.gz https://github.com/miladbeigi/vaultui/releases/latest/download/vaultui_*_darwin_arm64.tar.gz
+tar xzf vaultui.tar.gz
+sudo mv vaultui /usr/local/bin/
+
+# Linux (amd64)
+curl -Lo vaultui.tar.gz https://github.com/miladbeigi/vaultui/releases/latest/download/vaultui_*_linux_amd64.tar.gz
+tar xzf vaultui.tar.gz
+sudo mv vaultui /usr/local/bin/
+```
+
+### Docker
+
+```bash
+docker pull ghcr.io/miladbeigi/vaultui:latest
+docker run --rm -it -e VAULT_ADDR -e VAULT_TOKEN ghcr.io/miladbeigi/vaultui
+```
+
+### Go Install
+
+Requires Go 1.25+:
 
 ```bash
 go install github.com/miladbeigi/vaultui@latest
 ```
 
-Or build from source:
+### Build from Source
 
 ```bash
 git clone https://github.com/miladbeigi/vaultui.git
 cd vaultui
-go build -o vaultui .
+make build
 ```
 
 ### Run
@@ -192,11 +212,13 @@ Switch contexts inside the TUI with `:ctx` or by editing the config file.
 ```
 ├── cmd/                        # CLI entrypoint (Cobra)
 │   ├── root.go                 # Main command, flags, config loading
-│   └── get.go                  # Headless `vaultui get` subcommand
+│   ├── get.go                  # Headless `vaultui get` subcommand
+│   └── version.go              # `vaultui version` subcommand
 ├── internal/
 │   ├── app/                    # Bubble Tea model, router, keybindings
 │   ├── clipboard/              # Cross-platform clipboard with auto-clear
 │   ├── config/                 # YAML config loader (~/.vaultui.yaml)
+│   ├── version/                # Build-time version info (ldflags)
 │   ├── ui/
 │   │   ├── components/         # Reusable table, breadcrumb components
 │   │   ├── styles/             # Lipgloss color palette and styled components
@@ -207,7 +229,9 @@ Switch contexts inside the TUI with `:ctx` or by editing the config file.
 ├── docs/
 │   ├── DESIGN.md               # Detailed design document and roadmap
 │   └── development.md          # Development guide
-├── Makefile                    # Local CI: make ci, make test, make lint, etc.
+├── .goreleaser.yaml            # GoReleaser cross-platform release config
+├── CHANGELOG.md                # Release changelog
+├── Makefile                    # Local CI and build with version injection
 ├── Dockerfile                  # Multi-stage build from local source
 └── docker-compose.yml          # Local Vault dev environment with seed data
 ```

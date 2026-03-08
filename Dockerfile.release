@@ -1,0 +1,3 @@
+FROM alpine:3.21
+COPY vaultui /usr/local/bin/vaultui
+ENTRYPOINT ["vaultui"]

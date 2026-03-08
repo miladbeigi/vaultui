@@ -1,0 +1,79 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: vaultui
+    binary: vaultui
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/miladbeigi/vaultui/internal/version.Version={{.Version}}
+      - -X github.com/miladbeigi/vaultui/internal/version.Commit={{.ShortCommit}}
+      - -X github.com/miladbeigi/vaultui/internal/version.Date={{.Date}}
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+
+dockers:
+  - image_templates:
+      - "ghcr.io/miladbeigi/vaultui:{{ .Version }}-amd64"
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+    goarch: amd64
+    dockerfile: Dockerfile.release
+
+  - image_templates:
+      - "ghcr.io/miladbeigi/vaultui:{{ .Version }}-arm64"
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/arm64"
+    goarch: arm64
+    dockerfile: Dockerfile.release
+
+docker_manifests:
+  - name_template: "ghcr.io/miladbeigi/vaultui:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/miladbeigi/vaultui:{{ .Version }}-amd64"
+      - "ghcr.io/miladbeigi/vaultui:{{ .Version }}-arm64"
+
+  - name_template: "ghcr.io/miladbeigi/vaultui:latest"
+    image_templates:
+      - "ghcr.io/miladbeigi/vaultui:{{ .Version }}-amd64"
+      - "ghcr.io/miladbeigi/vaultui:{{ .Version }}-arm64"
+
+release:
+  github:
+    owner: miladbeigi
+    name: vaultui
+  prerelease: auto
+  name_template: "v{{ .Version }}"

@@ -11,6 +11,7 @@ import (
 	"github.com/miladbeigi/vaultui/internal/app"
 	"github.com/miladbeigi/vaultui/internal/config"
 	"github.com/miladbeigi/vaultui/internal/vault"
+	"github.com/miladbeigi/vaultui/internal/version"
 )
 
 var (
@@ -27,8 +28,9 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "vaultui",
-	Short: "A k9s-inspired TUI for HashiCorp Vault",
+	Use:     "vaultui",
+	Short:   "A k9s-inspired TUI for HashiCorp Vault",
+	Version: version.Version,
 	Long: `VaultUI is a keyboard-driven terminal UI for browsing, inspecting,
 and managing HashiCorp Vault. Navigate secrets, policies, auth methods,
 and leases — all without leaving the terminal.`,

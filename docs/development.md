@@ -19,6 +19,12 @@ go mod download
 ## Build
 
 ```sh
+make build
+```
+
+This injects version, commit, and date via `-ldflags`. You can also build manually:
+
+```sh
 go build -o vaultui .
 ```
 
@@ -82,9 +88,10 @@ Individual targets:
 | `make vet` | Run `go vet` static analysis |
 | `make lint` | Run `golangci-lint` |
 | `make test` | Run `go test ./...` |
-| `make build` | Build the binary |
+| `make build` | Build the binary with version ldflags |
 | `make tidy` | Check `go.mod` / `go.sum` tidiness |
 | `make clean` | Remove the built binary |
+| `make release VERSION_TAG=v0.2.0` | Tag and push a release |
 
 ## Test
 
@@ -130,11 +137,13 @@ vaultui/
 ├── main.go                       # Entrypoint
 ├── cmd/
 │   ├── root.go                   # Cobra CLI, flag parsing, config loading
-│   └── get.go                    # Headless `vaultui get` subcommand
+│   ├── get.go                    # Headless `vaultui get` subcommand
+│   └── version.go                # `vaultui version` subcommand
 ├── internal/
 │   ├── app/                      # Top-level Bubble Tea model, router, keybindings
 │   ├── clipboard/                # Cross-platform clipboard with auto-clear
 │   ├── config/                   # YAML config loader (~/.vaultui.yaml)
+│   ├── version/                  # Build-time version info (ldflags)
 │   ├── ui/
 │   │   ├── styles/               # Lipgloss color palette and style definitions
 │   │   ├── components/           # Reusable UI components (table, breadcrumb)
@@ -145,7 +154,9 @@ vaultui/
 ├── docs/
 │   ├── DESIGN.md                 # Design document and roadmap
 │   └── development.md            # This file
-├── Makefile                      # Local CI runner
+├── .goreleaser.yaml              # GoReleaser cross-platform release config
+├── CHANGELOG.md                  # Release changelog
+├── Makefile                      # Local CI runner and build with version injection
 ├── Dockerfile                    # Multi-stage build from local source
 └── docker-compose.yml            # Local Vault dev environment
 ```
@@ -268,6 +279,46 @@ vaultui get policies                    # List policies
 vaultui get secret secret/apps/myapp/config  # Read a secret
 vaultui get policy admin                # Read a policy body
 ```
+
+## Releasing
+
+The project uses [GoReleaser](https://goreleaser.com/) and GitHub Actions for automated releases.
+
+### Versioning
+
+We follow [Semantic Versioning](https://semver.org/) (`vMAJOR.MINOR.PATCH`):
+
+- **PATCH** — bug fixes, doc updates
+- **MINOR** — new features (new engine browser, new command, etc.)
+- **MAJOR** — breaking changes (config format change, removed flags, etc.)
+
+### Creating a Release
+
+1. Update `CHANGELOG.md` — move items from `[Unreleased]` to a new version section
+2. Commit the changelog update
+3. Tag and push:
+
+```sh
+make release VERSION_TAG=v0.2.0
+```
+
+This creates an annotated git tag and pushes it. GitHub Actions will automatically:
+
+- Build cross-platform binaries (linux/darwin, amd64/arm64)
+- Generate checksums
+- Build and push Docker images to `ghcr.io/miladbeigi/vaultui`
+- Create a GitHub Release with the binaries attached
+
+### Version Info
+
+The binary embeds version metadata via `-ldflags` at build time:
+
+```sh
+vaultui version
+# vaultui v0.1.0 (commit: abc1234, built: 2026-02-16T12:00:00Z, darwin/arm64)
+```
+
+The `make build` target injects these automatically. GoReleaser does the same for release builds.
 
 ## Coding Conventions
 
