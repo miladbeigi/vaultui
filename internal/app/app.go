@@ -191,6 +191,10 @@ func (m Model) executeCommand() (tea.Model, tea.Cmd) {
 	case "transit":
 		c := m.router.ResetToRoot(views.NewTransitView(m.client, "transit/"))
 		return m, c
+	case "token":
+		v := views.NewTokenInspectorView(m.client)
+		c := m.router.Push(v)
+		return m, c
 	case "ctx", "contexts":
 		c := m.router.ResetToRoot(views.NewContextsView(m.cfg))
 		return m, c

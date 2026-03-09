@@ -93,6 +93,19 @@ Fix all issues before committing. CI will reject the push otherwise.
   - GitHub Release with attached assets
 - GoReleaser config lives in `.goreleaser.yaml`; release workflow in `.github/workflows/release.yml`
 
+## UI Validation (before committing)
+
+After `make ci` passes, always validate the change in the live TUI before committing. The user runs the app — not the assistant.
+
+1. Ensure docker compose is running: `docker compose up -d`
+2. Verify seed data: `docker compose logs seed | tail -1`
+3. Give the user the exact command to run and the steps to exercise the feature (which command to type, which key to press, what to look for)
+4. **Wait for the user to confirm** that the change works as expected before committing
+5. Do NOT commit or push until the user explicitly confirms
+
+If the feature involves auth methods, also suggest testing with userpass or approle:
+- `go run . --vault-addr=http://127.0.0.1:8200 --auth-method=userpass --username=testuser --password=testpass`
+
 ## Committing
 
 - Message style: verb + what changed ("Add X browser", "Fix Y navigation", "Remove Z feature")
@@ -107,6 +120,7 @@ Fix all issues before committing. CI will reject the push otherwise.
   ```
 - Push after each logical unit of work
 - Run `make ci` before every commit
+- Only commit after user has confirmed the UI validation
 
 ## Key Project Conventions
 

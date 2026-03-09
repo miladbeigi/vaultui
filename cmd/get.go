@@ -23,7 +23,8 @@ Examples:
   vaultui get engines
   vaultui get policies
   vaultui get auth
-  vaultui get health`,
+  vaultui get health
+  vaultui get token`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		vc, err := vault.NewClient(vault.ClientConfig{
@@ -52,6 +53,8 @@ Examples:
 
 		resource := args[0]
 		switch resource {
+		case "token":
+			return getToken(vc)
 		case "health":
 			return getHealth(vc)
 		case "engines":
@@ -71,7 +74,7 @@ Examples:
 			}
 			return getPolicy(vc, args[1])
 		default:
-			return fmt.Errorf("unknown resource: %s (try: health, engines, auth, policies, secret, policy)", resource)
+			return fmt.Errorf("unknown resource: %s (try: health, engines, auth, policies, secret, policy, token)", resource)
 		}
 	},
 }
@@ -85,6 +88,14 @@ func outputJSON(v interface{}) error {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	return enc.Encode(v)
+}
+
+func getToken(vc *vault.Client) error {
+	details, err := vc.InspectToken()
+	if err != nil {
+		return err
+	}
+	return outputJSON(details)
 }
 
 func getHealth(vc *vault.Client) error {
