@@ -79,6 +79,11 @@ func (v *EnginesView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 			cmd := v.handleEnter()
 			return v, cmd
 		}
+
+		if msg.String() == "d" {
+			cmd := v.handleDescribe()
+			return v, cmd
+		}
 	}
 
 	return v, nil
@@ -120,6 +125,7 @@ func (v *EnginesView) KeyHints() []ui.KeyHint {
 	return []ui.KeyHint{
 		{Key: "↑↓", Desc: "navigate"},
 		{Key: "⏎", Desc: "browse"},
+		{Key: "d", Desc: "describe"},
 		{Key: "esc", Desc: "back"},
 		{Key: "q", Desc: "quit"},
 	}
@@ -141,6 +147,17 @@ func (v *EnginesView) handleEnter() tea.Cmd {
 		kvV2 := engine.Version == "v2"
 		next = NewPathBrowserView(v.client, engine.Path, "", kvV2)
 	}
+	return func() tea.Msg {
+		return ui.PushViewMsg{View: next}
+	}
+}
+
+func (v *EnginesView) handleDescribe() tea.Cmd {
+	engine := v.SelectedEngine()
+	if engine == nil {
+		return nil
+	}
+	next := NewEngineDashboardView(v.client, engine.Path)
 	return func() tea.Msg {
 		return ui.PushViewMsg{View: next}
 	}
