@@ -106,45 +106,40 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.switchContext(msg.Context)
 
 	case tea.KeyMsg:
-		if m.cmdActive {
-			return m.updateCommandInput(msg)
-		}
+		return m.handleKeyMsg(msg)
+	}
 
-		switch {
-		case key.Matches(msg, keys.Quit):
-			m.stopRenewer()
-			m.quitting = true
-			return m, tea.Quit
-		case key.Matches(msg, keys.ForceQuit):
-			m.stopRenewer()
-			m.quitting = true
-			return m, tea.Quit
-		case key.Matches(msg, keys.Back):
-			if m.router.Pop() {
-				return m, nil
-			}
-		case key.Matches(msg, keys.Command):
-			m.cmdActive = true
-			m.cmdInput = ""
-			m.cmdError = ""
+	if current := m.router.Current(); current != nil {
+		updated, cmd := current.Update(msg)
+		m.router.Replace(updated)
+		return m, cmd
+	}
+
+	return m, nil
+}
+
+func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.cmdActive {
+		return m.updateCommandInput(msg)
+	}
+
+	switch {
+	case key.Matches(msg, keys.Quit), key.Matches(msg, keys.ForceQuit):
+		m.stopRenewer()
+		m.quitting = true
+		return m, tea.Quit
+	case key.Matches(msg, keys.Back):
+		if m.router.Pop() {
 			return m, nil
-		case key.Matches(msg, keys.Jump1):
-			cmd := m.router.ResetToRoot(views.NewEnginesView(m.client))
-			return m, cmd
-		case key.Matches(msg, keys.Jump2):
-			cmd := m.router.ResetToRoot(views.NewAuthMethodsView(m.client))
-			return m, cmd
-		case key.Matches(msg, keys.Jump3):
-			cmd := m.router.ResetToRoot(views.NewPoliciesView(m.client))
-			return m, cmd
-		case key.Matches(msg, keys.Jump4):
-			cmd := m.router.ResetToRoot(views.NewIdentityView(m.client))
-			return m, cmd
-		case key.Matches(msg, keys.Jump5):
-			cmd := m.router.ResetToRoot(views.NewPKIView(m.client, "pki/"))
-			return m, cmd
-		case key.Matches(msg, keys.Jump6):
-			cmd := m.router.ResetToRoot(views.NewTransitView(m.client, "transit/"))
+		}
+	case key.Matches(msg, keys.Command):
+		m.cmdActive = true
+		m.cmdInput = ""
+		m.cmdError = ""
+		return m, nil
+	default:
+		if v := m.handleJumpKey(msg); v != nil {
+			cmd := m.router.ResetToRoot(v)
 			return m, cmd
 		}
 	}
@@ -156,6 +151,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m Model) handleJumpKey(msg tea.KeyMsg) ui.View {
+	switch {
+	case key.Matches(msg, keys.Jump1):
+		return views.NewEnginesView(m.client)
+	case key.Matches(msg, keys.Jump2):
+		return views.NewAuthMethodsView(m.client)
+	case key.Matches(msg, keys.Jump3):
+		return views.NewPoliciesView(m.client)
+	case key.Matches(msg, keys.Jump4):
+		return views.NewIdentityView(m.client)
+	case key.Matches(msg, keys.Jump5):
+		return views.NewPKIView(m.client, "pki/")
+	case key.Matches(msg, keys.Jump6):
+		return views.NewTransitView(m.client, "transit/")
+	}
+	return nil
 }
 
 func (m Model) updateCommandInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
