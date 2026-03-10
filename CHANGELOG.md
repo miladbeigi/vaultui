@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-10
+
+### Added
+
+- Token inspector view (`:token` command) showing policies, TTL, accessor, entity ID, auth path, token type, and metadata with refresh support
+- Secret engine dashboard (`d` key in Secret Engines view) showing per-engine mount config, default/max lease TTL, UUID, accessor, seal wrap, and tuning parameters
+- Headless `vaultui get token` for scripting token inspection
+- UI validation step in development workflow (user confirms changes before commit)
+
 ## [0.1.0] - 2026-02-16
 
 ### Added
