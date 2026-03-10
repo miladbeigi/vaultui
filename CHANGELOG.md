@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-03-10
+
+### Fixed
+
+- Secret Engines PATH column now auto-sizes to fit the longest engine path
+- Reduced cyclomatic complexity of `Update()` for better Go Report Card score
+
 ## [0.3.1] - 2026-03-10
 
 ### Fixed
