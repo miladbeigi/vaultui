@@ -1,5 +1,10 @@
 # VaultUI
 
+[![CI](https://github.com/miladbeigi/vaultui/actions/workflows/ci.yml/badge.svg)](https://github.com/miladbeigi/vaultui/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/miladbeigi/vaultui)](https://github.com/miladbeigi/vaultui/releases/latest)
+[![Go Report Card](https://goreportcard.com/badge/github.com/miladbeigi/vaultui)](https://goreportcard.com/report/github.com/miladbeigi/vaultui)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A **k9s-inspired terminal UI** for [HashiCorp Vault](https://www.vaultproject.io/).
 Browse secrets, auth methods, policies, and more — without leaving your terminal.
 
