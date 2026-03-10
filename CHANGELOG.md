@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-03-10
+
+### Added
+
+- Command palette auto-complete with Tab/Shift-Tab cycling and fuzzy matching
+- Secret jump-to-path via `:go <path>` command for direct navigation to any secret
+- Inline completion hints shown as user types in command palette
+- Space key support in command palette input
+- CI, release, Go Report Card, and license badges in README
+- MIT license file
+
 ## [0.2.0] - 2026-03-10
 
 ### Added
