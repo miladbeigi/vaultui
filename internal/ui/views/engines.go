@@ -27,18 +27,27 @@ type EnginesView struct {
 
 var _ ui.View = (*EnginesView)(nil)
 
-var engineColumns = []components.Column{
-	{Title: "PATH", MinWidth: 20},
-	{Title: "TYPE", MinWidth: 14},
-	{Title: "VERSION", MinWidth: 10},
-	{Title: "DESCRIPTION", MinWidth: 30, FlexFill: true},
+func engineColumnsForData(engines []vault.MountEntry) []components.Column {
+	pathWidth := 20
+	for _, e := range engines {
+		if len(e.Path)+2 > pathWidth {
+			pathWidth = len(e.Path) + 2
+		}
+	}
+	return []components.Column{
+		{Title: "PATH", MinWidth: pathWidth},
+		{Title: "TYPE", MinWidth: 14},
+		{Title: "VERSION", MinWidth: 10},
+		{Title: "DESCRIPTION", MinWidth: 20, FlexFill: true},
+	}
 }
 
 // NewEnginesView creates a new secret engines browser.
 func NewEnginesView(client *vault.Client) *EnginesView {
+	defaultCols := engineColumnsForData(nil)
 	return &EnginesView{
 		client:  client,
-		table:   components.NewTable(engineColumns),
+		table:   components.NewTable(defaultCols),
 		loading: true,
 	}
 }
@@ -58,6 +67,7 @@ func (v *EnginesView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		v.loading = false
 		v.err = msg.err
 		v.engines = msg.engines
+		v.table = components.NewTable(engineColumnsForData(v.engines))
 		v.table.SetRows(v.buildRows())
 		return v, nil
 
