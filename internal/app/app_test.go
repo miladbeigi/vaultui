@@ -421,3 +421,126 @@ func TestCommandPalette_KeysDontLeakToView(t *testing.T) {
 		t.Errorf("expected 'q' to be typed into input, got %q", model.cmdInput)
 	}
 }
+
+func TestCommandPalette_TabCompletion(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, nil, "")
+	m.cmdActive = true
+	m.cmdInput = "se"
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model := updated.(Model)
+
+	if model.cmdInput != "secrets" {
+		t.Errorf("expected tab to complete to 'secrets', got %q", model.cmdInput)
+	}
+}
+
+func TestCommandPalette_TabCycle(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, nil, "")
+	m.cmdActive = true
+	m.cmdInput = "d"
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	first := updated.(Model)
+
+	updated, _ = first.Update(tea.KeyMsg{Type: tea.KeyTab})
+	second := updated.(Model)
+
+	if first.cmdInput == second.cmdInput && len(second.cmdMatches) > 1 {
+		t.Error("expected tab to cycle to a different match")
+	}
+}
+
+func TestCommandPalette_ShiftTabReverse(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, nil, "")
+	m.cmdActive = true
+	m.cmdInput = "d"
+	m.cmdMatches = []string{"dash", "dashboard"}
+	m.cmdMatchIdx = 0
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyShiftTab})
+	model := updated.(Model)
+
+	if model.cmdInput != "dashboard" {
+		t.Errorf("expected shift-tab to go to 'dashboard', got %q", model.cmdInput)
+	}
+}
+
+func TestCommandPalette_TabNoMatch(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, nil, "")
+	m.cmdActive = true
+	m.cmdInput = "zzz"
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	model := updated.(Model)
+
+	if model.cmdInput != "zzz" {
+		t.Errorf("expected input unchanged when no matches, got %q", model.cmdInput)
+	}
+}
+
+func TestCommandPalette_TypingResetsMatches(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, nil, "")
+	m.cmdActive = true
+	m.cmdInput = "se"
+	m.cmdMatches = []string{"secrets"}
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	model := updated.(Model)
+
+	if model.cmdMatches != nil {
+		t.Error("expected matches to be reset after typing")
+	}
+}
+
+func TestCommandPalette_GoEmptyPath(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, nil, "")
+	m.cmdActive = true
+	m.cmdInput = "go "
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model := updated.(Model)
+
+	if !model.cmdActive {
+		t.Error("expected palette to stay active for empty go path")
+	}
+	if model.cmdError == "" {
+		t.Error("expected error for empty go path")
+	}
+}
+
+func TestFilterCommands_Prefix(t *testing.T) {
+	m := Model{}
+	matches := m.filterCommands("po")
+	if len(matches) != 1 || matches[0] != "policies" {
+		t.Errorf("expected [policies], got %v", matches)
+	}
+}
+
+func TestFilterCommands_Fuzzy(t *testing.T) {
+	m := Model{}
+	matches := m.filterCommands("ash")
+	found := false
+	for _, match := range matches {
+		if match == "dash" || match == "dashboard" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("expected fuzzy match for 'ash' to include dash/dashboard, got %v", matches)
+	}
+}
+
+func TestFilterCommands_Empty(t *testing.T) {
+	m := Model{}
+	matches := m.filterCommands("")
+	if len(matches) != len(commandNames) {
+		t.Errorf("expected all commands for empty prefix, got %d", len(matches))
+	}
+}

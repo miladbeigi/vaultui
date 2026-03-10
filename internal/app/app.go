@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -19,23 +20,40 @@ type healthMsg struct {
 	err    error
 }
 
+var commandNames = []string{
+	"auth",
+	"ctx",
+	"dash",
+	"dashboard",
+	"identity",
+	"pki",
+	"policies",
+	"quit",
+	"secrets",
+	"token",
+	"transit",
+	"go ",
+}
+
 // Model is the top-level Bubble Tea model for the application.
 type Model struct {
-	client    *vault.Client
-	cfg       *config.Config
-	cfgPath   string
-	router    *Router
-	health    *vault.HealthStatus
-	healthErr error
-	renewer   *vault.TokenRenewer
-	width     int
-	height    int
-	ready     bool
-	quitting  bool
-	initCmd   tea.Cmd
-	cmdActive bool
-	cmdInput  string
-	cmdError  string
+	client      *vault.Client
+	cfg         *config.Config
+	cfgPath     string
+	router      *Router
+	health      *vault.HealthStatus
+	healthErr   error
+	renewer     *vault.TokenRenewer
+	width       int
+	height      int
+	ready       bool
+	quitting    bool
+	initCmd     tea.Cmd
+	cmdActive   bool
+	cmdInput    string
+	cmdError    string
+	cmdMatches  []string
+	cmdMatchIdx int
 }
 
 // New creates the initial application model with the given Vault client.
@@ -148,19 +166,68 @@ func (m Model) updateCommandInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.cmdActive = false
 		m.cmdInput = ""
 		m.cmdError = ""
+		m.cmdMatches = nil
+		return m, nil
+	case tea.KeyTab:
+		m.cmdError = ""
+		if len(m.cmdMatches) == 0 {
+			m.cmdMatches = m.filterCommands(m.cmdInput)
+			m.cmdMatchIdx = 0
+		} else {
+			m.cmdMatchIdx = (m.cmdMatchIdx + 1) % len(m.cmdMatches)
+		}
+		if len(m.cmdMatches) > 0 {
+			m.cmdInput = m.cmdMatches[m.cmdMatchIdx]
+		}
+		return m, nil
+	case tea.KeyShiftTab:
+		m.cmdError = ""
+		if len(m.cmdMatches) > 0 {
+			m.cmdMatchIdx = (m.cmdMatchIdx - 1 + len(m.cmdMatches)) % len(m.cmdMatches)
+			m.cmdInput = m.cmdMatches[m.cmdMatchIdx]
+		}
 		return m, nil
 	case tea.KeyBackspace:
 		if m.cmdInput != "" {
 			m.cmdInput = m.cmdInput[:len(m.cmdInput)-1]
 		}
 		m.cmdError = ""
+		m.cmdMatches = nil
+		return m, nil
+	case tea.KeySpace:
+		m.cmdInput += " "
+		m.cmdError = ""
+		m.cmdMatches = nil
 		return m, nil
 	case tea.KeyRunes:
 		m.cmdInput += string(msg.Runes)
 		m.cmdError = ""
+		m.cmdMatches = nil
 		return m, nil
 	}
 	return m, nil
+}
+
+func (m Model) filterCommands(prefix string) []string {
+	if prefix == "" {
+		return append([]string{}, commandNames...)
+	}
+	var matches []string
+	lower := strings.ToLower(prefix)
+	for _, name := range commandNames {
+		if strings.HasPrefix(name, lower) {
+			matches = append(matches, name)
+		}
+	}
+	if len(matches) > 0 {
+		return matches
+	}
+	for _, name := range commandNames {
+		if strings.Contains(name, lower) {
+			matches = append(matches, name)
+		}
+	}
+	return matches
 }
 
 func (m Model) executeCommand() (tea.Model, tea.Cmd) {
@@ -169,44 +236,91 @@ func (m Model) executeCommand() (tea.Model, tea.Cmd) {
 	m.cmdInput = ""
 	m.cmdError = ""
 
-	switch cmd {
-	case "secrets":
+	switch {
+	case cmd == "secrets":
 		c := m.router.ResetToRoot(views.NewEnginesView(m.client))
 		return m, c
-	case "auth":
+	case cmd == "auth":
 		c := m.router.ResetToRoot(views.NewAuthMethodsView(m.client))
 		return m, c
-	case "policies":
+	case cmd == "policies":
 		c := m.router.ResetToRoot(views.NewPoliciesView(m.client))
 		return m, c
-	case "dash", "dashboard":
+	case cmd == "dash" || cmd == "dashboard":
 		c := m.router.ResetToRoot(views.NewDashboardView(m.client))
 		return m, c
-	case "identity":
+	case cmd == "identity":
 		c := m.router.ResetToRoot(views.NewIdentityView(m.client))
 		return m, c
-	case "pki":
+	case cmd == "pki":
 		c := m.router.ResetToRoot(views.NewPKIView(m.client, "pki/"))
 		return m, c
-	case "transit":
+	case cmd == "transit":
 		c := m.router.ResetToRoot(views.NewTransitView(m.client, "transit/"))
 		return m, c
-	case "token":
+	case cmd == "token":
 		v := views.NewTokenInspectorView(m.client)
 		c := m.router.Push(v)
 		return m, c
-	case "ctx", "contexts":
+	case cmd == "ctx" || cmd == "contexts":
 		c := m.router.ResetToRoot(views.NewContextsView(m.cfg))
 		return m, c
-	case "q", "quit":
+	case cmd == "q" || cmd == "quit":
 		m.quitting = true
 		return m, tea.Quit
+	case strings.HasPrefix(cmd, "go "):
+		return m.jumpToPath(strings.TrimSpace(strings.TrimPrefix(cmd, "go ")))
 	default:
 		m.cmdActive = true
 		m.cmdInput = cmd
 		m.cmdError = fmt.Sprintf("unknown command: %s", cmd)
 		return m, nil
 	}
+}
+
+func (m Model) jumpToPath(fullPath string) (tea.Model, tea.Cmd) {
+	if fullPath == "" {
+		m.cmdActive = true
+		m.cmdInput = "go "
+		m.cmdError = "path required: go <mount/path>"
+		return m, nil
+	}
+
+	engines, err := m.client.ListSecretEngines()
+	if err != nil {
+		m.cmdActive = true
+		m.cmdInput = "go " + fullPath
+		m.cmdError = "failed to list engines"
+		return m, nil
+	}
+
+	var mount string
+	var subPath string
+	var kvV2 bool
+	for _, e := range engines {
+		if strings.HasPrefix(fullPath, e.Path) {
+			mount = e.Path
+			subPath = fullPath[len(e.Path):]
+			kvV2 = e.Version == "v2"
+			break
+		}
+	}
+	if mount == "" {
+		m.cmdActive = true
+		m.cmdInput = "go " + fullPath
+		m.cmdError = fmt.Sprintf("no engine found for path: %s", fullPath)
+		return m, nil
+	}
+
+	if subPath == "" || strings.HasSuffix(subPath, "/") {
+		v := views.NewPathBrowserView(m.client, mount, subPath, kvV2)
+		c := m.router.ResetToRoot(v)
+		return m, c
+	}
+
+	v := views.NewSecretDetailView(m.client, mount, subPath, kvV2)
+	c := m.router.ResetToRoot(v)
+	return m, c
 }
 
 func (m *Model) stopRenewer() {
@@ -397,6 +511,11 @@ func (m Model) renderCommandInput() string {
 	line := prompt + input + cursor
 	if m.cmdError != "" {
 		line += "  " + styles.ErrorStyle.Render(m.cmdError)
+	} else if m.cmdInput != "" {
+		matches := m.filterCommands(m.cmdInput)
+		if len(matches) > 0 && matches[0] != m.cmdInput {
+			line += "  " + styles.SubtleStyle.Render("tab: "+strings.Join(matches, ", "))
+		}
 	}
 
 	return lipgloss.NewStyle().
