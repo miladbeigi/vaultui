@@ -8,7 +8,13 @@ LDFLAGS  = -s -w \
 
 .PHONY: ci fmt vet lint test build tidy clean release
 
-ci: fmt vet lint test build tidy
+ci:
+	@if $(MAKE) --no-print-directory fmt vet lint test build tidy; then \
+		printf '\033[1;32m✔ All checks passed — ready to ship!\033[0m\n'; \
+	else \
+		printf '\033[1;31m✘ CI failed — check the errors above.\033[0m\n'; \
+		exit 1; \
+	fi
 
 fmt:
 	@echo "==> Checking formatting..."

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-03-15
+
+### Added
+
+- Database secrets engine browser with tabbed view (Connections, Roles, Static Roles)
+- Connection detail view showing plugin, connection URL, allowed roles, verify status
+- Dynamic role detail view with creation/revocation statements and TTL config
+- Static role detail view with username, rotation period, and last rotation timestamp
+- Jump shortcut `7` and `:db` command for quick access to database engine
+- PostgreSQL container in Docker Compose for database engine seed data
+- Seed data: database connection, 3 dynamic roles, 1 static role
+- Colored CI output (green on success, red on failure)
+
 ## [0.4.0] - 2026-03-10
 
 ### Fixed

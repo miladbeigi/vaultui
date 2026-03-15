@@ -1,4 +1,15 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: testdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+
   vault:
     image: hashicorp/vault:1.15
     container_name: vaultui-dev
@@ -17,6 +28,7 @@ services:
     image: hashicorp/vault:1.15
     depends_on:
       - vault
+      - postgres
     restart: "no"
     environment:
       VAULT_ADDR: http://vault:8200

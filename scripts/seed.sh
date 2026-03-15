@@ -156,4 +156,48 @@ vault secrets enable transit
 vault write -f transit/keys/my-app-key
 vault write -f transit/keys/payment-key type=aes256-gcm96
 
+# ── Database secrets engine ────────────────────────────────
+vault secrets enable database
+
+# Wait for PostgreSQL to be ready
+for i in $(seq 1 10); do
+  if vault write database/config/testdb-postgres \
+    plugin_name=postgresql-database-plugin \
+    allowed_roles="app-readwrite,app-readonly,analyst,ops-monitoring" \
+    connection_url="postgresql://{{username}}:{{password}}@postgres:5432/testdb?sslmode=disable" \
+    username="postgres" \
+    password="postgres" 2>/dev/null; then
+    break
+  fi
+  echo "Waiting for PostgreSQL... ($i/10)"
+  sleep 2
+done
+
+# Dynamic roles
+vault write database/roles/app-readwrite \
+  db_name=testdb-postgres \
+  creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"{{name}}\";" \
+  revocation_statements="DROP ROLE IF EXISTS \"{{name}}\";" \
+  default_ttl=1h \
+  max_ttl=24h
+
+vault write database/roles/app-readonly \
+  db_name=testdb-postgres \
+  creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";" \
+  revocation_statements="DROP ROLE IF EXISTS \"{{name}}\";" \
+  default_ttl=1h \
+  max_ttl=12h
+
+vault write database/roles/analyst \
+  db_name=testdb-postgres \
+  creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";" \
+  default_ttl=30m \
+  max_ttl=4h
+
+# Static role
+vault write database/static-roles/ops-monitoring \
+  db_name=testdb-postgres \
+  username="postgres" \
+  rotation_period=86400
+
 echo "Seed data loaded successfully."

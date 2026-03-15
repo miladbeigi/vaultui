@@ -25,6 +25,7 @@ var commandNames = []string{
 	"ctx",
 	"dash",
 	"dashboard",
+	"db",
 	"identity",
 	"pki",
 	"policies",
@@ -167,6 +168,8 @@ func (m Model) handleJumpKey(msg tea.KeyMsg) ui.View {
 		return views.NewPKIView(m.client, "pki/")
 	case key.Matches(msg, keys.Jump6):
 		return views.NewTransitView(m.client, "transit/")
+	case key.Matches(msg, keys.Jump7):
+		return views.NewDatabaseView(m.client, "database/")
 	}
 	return nil
 }
@@ -270,6 +273,9 @@ func (m Model) executeCommand() (tea.Model, tea.Cmd) {
 		return m, c
 	case cmd == "transit":
 		c := m.router.ResetToRoot(views.NewTransitView(m.client, "transit/"))
+		return m, c
+	case cmd == "db" || cmd == "database":
+		c := m.router.ResetToRoot(views.NewDatabaseView(m.client, "database/"))
 		return m, c
 	case cmd == "token":
 		v := views.NewTokenInspectorView(m.client)
