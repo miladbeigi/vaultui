@@ -609,32 +609,32 @@ keys:
 > **Goal:** Deeper insight into Vault state, faster navigation workflows.
 
 - [ ] ~~Live audit log stream~~ (deferred — requires local file access or reliable remote streaming)
-- [ ] Token inspector (view current token details: policies, TTL remaining, accessor, entity ID, metadata)
-- [ ] Secret engine dashboard (per-engine detail view: mount config, default/max TTL, tuning parameters, description)
-- [ ] Secret jump-to-path (`Ctrl+G` or `:go <path>` to navigate directly to a secret path without browsing folder-by-folder)
-- [ ] Command palette auto-complete (tab completion and fuzzy matching for `:` commands)
+- [x] Token inspector (view current token details: policies, TTL remaining, accessor, entity ID, metadata)
+- [x] Secret engine dashboard (per-engine detail view: mount config, default/max TTL, tuning parameters, description)
+- [x] Secret jump-to-path (`:go <path>` to navigate directly to a secret path without browsing folder-by-folder)
+- [x] Command palette auto-complete (tab completion and fuzzy matching for `:` commands)
 
 ### Phase 6 — Database Secrets Engine
 > **Goal:** Read-only browser for Vault's database secrets engine.
 
-- [ ] Database connections browser (list `database/config/*` — name, plugin type, allowed roles)
-- [ ] Connection detail view (plugin, connection URL mask, verify connection status, allowed/denied roles)
-- [ ] Database roles browser (list `database/roles/*` — name, DB name, default TTL, max TTL)
-- [ ] Role detail view (creation statements, revocation statements, TTL config, role type)
-- [ ] Static roles browser (list `database/static-roles/*` — name, DB name, rotation period, last rotation time)
-- [ ] Static role detail view (username, rotation period, last vault rotation timestamp)
-- [ ] Jump shortcut (`7`) and `:db` command for quick access
-- [ ] Seed data with Docker Compose (PostgreSQL container + database engine config + roles)
+- [x] Database connections browser (list `database/config/*` — name, plugin type, allowed roles)
+- [x] Connection detail view (plugin, connection URL mask, verify connection status, allowed/denied roles)
+- [x] Database roles browser (list `database/roles/*` — name, DB name, default TTL, max TTL)
+- [x] Role detail view (creation statements, revocation statements, TTL config, role type)
+- [x] Static roles browser (list `database/static-roles/*` — name, DB name, rotation period, last rotation time)
+- [x] Static role detail view (username, rotation period, last vault rotation timestamp)
+- [x] Jump shortcut (`7`) and `:db` command for quick access
+- [x] Seed data with Docker Compose (PostgreSQL container + database engine config + roles)
 
 ### Phase 7 — AWS Secrets Engine
 > **Goal:** Read-only browser for Vault's AWS secrets engine.
 
-- [ ] AWS roles browser (list `aws/roles/*` — name, credential type, policy ARNs)
-- [ ] Role detail view (credential type: iam_user / assumed_role / federation_token, policy document, ARNs, default TTL, max TTL)
-- [ ] AWS engine config viewer (read `aws/config/root` — region, IAM endpoint, max retries; credentials masked)
-- [ ] AWS leases browser (list active leases under `aws/` — lease ID, role, TTL remaining, issue time)
-- [ ] Jump shortcut (`8`) and `:aws` command for quick access
-- [ ] Seed data with LocalStack or mock config for development testing
+- [x] AWS roles browser (list `aws/roles/*` — name, credential type, policy ARNs)
+- [x] Role detail view (credential type: iam_user / assumed_role / federation_token, policy document, ARNs, default TTL, max TTL)
+- [x] AWS engine config viewer (read `aws/config/root` — region, IAM endpoint, max retries; credentials masked)
+- [x] AWS leases browser (list active leases under `aws/` — lease ID, role, TTL remaining, issue time)
+- [x] Jump shortcut (`8`) and `:aws` command for quick access
+- [x] Seed data with LocalStack for development testing
 
 ### X — Deferred
 > Items deprioritised from their original phase. Will revisit when needed.
