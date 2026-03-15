@@ -20,11 +20,14 @@ type tokenInspectMsg struct {
 
 // TokenInspectorView displays comprehensive details about the current token.
 type TokenInspectorView struct {
-	client  *vault.Client
-	details *vault.TokenDetails
-	table   *components.Table
-	err     error
-	loading bool
+	client           *vault.Client
+	details          *vault.TokenDetails
+	table            *components.Table
+	rawView          *components.RawView
+	rawMode          bool
+	pendingRawFormat *components.RawFormat
+	err              error
+	loading          bool
 }
 
 var _ ui.View = (*TokenInspectorView)(nil)
@@ -40,6 +43,10 @@ func NewTokenInspectorView(client *vault.Client) *TokenInspectorView {
 		table:   components.NewTable(tokenInspectorColumns),
 		loading: true,
 	}
+}
+
+func (v *TokenInspectorView) SetInitialRawFormat(format components.RawFormat) {
+	v.pendingRawFormat = &format
 }
 
 func (v *TokenInspectorView) Init() tea.Cmd {
@@ -58,9 +65,47 @@ func (v *TokenInspectorView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		v.err = msg.err
 		v.details = msg.details
 		v.table.SetRows(v.buildRows())
+		if v.pendingRawFormat != nil {
+			v.toggleRaw(*v.pendingRawFormat)
+			v.pendingRawFormat = nil
+		}
 		return v, nil
 
 	case tea.KeyMsg:
+		if v.rawMode {
+			switch msg.String() {
+			case "j", "down":
+				v.rawView.ScrollDown()
+			case "k", "up":
+				v.rawView.ScrollUp()
+			case "g", "home":
+				v.rawView.GoToTop()
+			case "G", "end":
+				v.rawView.GoToBottom()
+			case "ctrl+d":
+				v.rawView.PageDown()
+			case "ctrl+u":
+				v.rawView.PageUp()
+			case "c":
+				if err := v.rawView.CopyContent(); err != nil {
+					v.rawView.Status = "✗ " + err.Error()
+				} else {
+					v.rawView.Status = "✓ Copied " + v.rawView.FormatLabel() + " to clipboard"
+				}
+			case "J":
+				v.toggleRaw(components.FormatJSON)
+			case "y":
+				v.toggleRaw(components.FormatYAML)
+			case "r":
+				v.rawMode = false
+				v.loading = true
+				return v, v.fetchToken
+			case "esc":
+				v.rawMode = false
+				return v, nil
+			}
+			return v, nil
+		}
 		switch msg.String() {
 		case "j", "down":
 			v.table.MoveDown()
@@ -73,6 +118,10 @@ func (v *TokenInspectorView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		case "r":
 			v.loading = true
 			return v, v.fetchToken
+		case "J":
+			v.toggleRaw(components.FormatJSON)
+		case "y":
+			v.toggleRaw(components.FormatYAML)
 		}
 	}
 
@@ -98,6 +147,12 @@ func (v *TokenInspectorView) View(width, height int) string {
 		return lipgloss.JoinVertical(lipgloss.Left, title, body)
 	}
 
+	if v.rawMode && v.rawView != nil {
+		v.rawView.SetSize(width, height-tokenInspectorTitleHeight)
+		rawTitle := title + "  " + styles.SecondaryStyle.Render("["+v.rawView.FormatLabel()+"]")
+		return lipgloss.JoinVertical(lipgloss.Left, rawTitle, v.rawView.View())
+	}
+
 	return lipgloss.JoinVertical(lipgloss.Left, title, v.table.View())
 }
 
@@ -106,11 +161,77 @@ func (v *TokenInspectorView) Title() string {
 }
 
 func (v *TokenInspectorView) KeyHints() []ui.KeyHint {
+	if v.rawMode {
+		return []ui.KeyHint{
+			{Key: "↑↓", Desc: "scroll"},
+			{Key: "c", Desc: "copy"},
+			{Key: "J/y", Desc: "json/yaml"},
+			{Key: "r", Desc: "refresh"},
+			{Key: "esc", Desc: "table view"},
+		}
+	}
 	return []ui.KeyHint{
 		{Key: "↑↓", Desc: "navigate"},
+		{Key: "J/y", Desc: "json/yaml"},
 		{Key: "r", Desc: "refresh"},
 		{Key: "esc", Desc: "back"},
 	}
+}
+
+func (v *TokenInspectorView) toggleRaw(format components.RawFormat) {
+	if v.rawMode && v.rawView.Format() == format {
+		v.rawMode = false
+		return
+	}
+	data := v.buildData()
+	if data == nil {
+		return
+	}
+	if v.rawView == nil {
+		v.rawView = components.NewRawView(data, format)
+	} else {
+		v.rawView.SetData(data)
+		v.rawView.SetFormat(format)
+	}
+	v.rawView.Status = ""
+	v.rawMode = true
+}
+
+func (v *TokenInspectorView) buildData() map[string]interface{} {
+	if v.details == nil {
+		return nil
+	}
+	d := v.details
+	data := map[string]interface{}{
+		"Type":          tokenTypeDisplay(d.TokenType),
+		"Display Name":  valueOrDash(d.DisplayName),
+		"Accessor":      valueOrDash(d.Accessor),
+		"Policies":      valueOrDash(d.PoliciesString()),
+		"Renewable":     d.Renewable,
+		"Orphan":        d.Orphan,
+		"Num Uses":      numUsesDisplay(d.NumUses),
+		"TTL Remaining": formatDurationHuman(d.TTL),
+		"Creation TTL":  formatDurationHuman(d.CreationTTL),
+		"Max TTL":       formatDurationHuman(d.MaxTTL),
+	}
+	if !d.CreationAt.IsZero() {
+		data["Created"] = d.CreationAt.Format(time.RFC3339)
+	}
+	if !d.ExpireAt.IsZero() {
+		data["Expires"] = d.ExpireAt.Format(time.RFC3339)
+	} else {
+		data["Expires"] = "never"
+	}
+	if d.EntityID != "" {
+		data["Entity ID"] = d.EntityID
+	}
+	if d.Path != "" {
+		data["Auth Path"] = d.Path
+	}
+	if len(d.Meta) > 0 {
+		data["Meta"] = d.Meta
+	}
+	return data
 }
 
 func (v *TokenInspectorView) buildRows() []components.Row {

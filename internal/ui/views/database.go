@@ -110,6 +110,12 @@ func (v *DatabaseView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		case key.Matches(msg, navKeys.Enter):
 			cmd := v.handleEnter()
 			return v, cmd
+		case msg.String() == "J":
+			cmd := v.handleRawOpen(components.FormatJSON)
+			return v, cmd
+		case msg.String() == "y":
+			cmd := v.handleRawOpen(components.FormatYAML)
+			return v, cmd
 		}
 	}
 
@@ -128,6 +134,36 @@ func (v *DatabaseView) rebuildTable() {
 		v.table = components.NewTable(dbStaticRoleColumns)
 		v.table.SetRows(v.buildStaticRoleRows())
 	}
+}
+
+func (v *DatabaseView) handleRawOpen(format components.RawFormat) tea.Cmd {
+	switch v.tab {
+	case 0:
+		idx := v.table.Cursor()
+		if idx < 0 || idx >= len(v.conns) {
+			return nil
+		}
+		next := NewDBConnectionDetailView(v.client, v.mount, v.conns[idx].Name)
+		next.SetInitialRawFormat(format)
+		return func() tea.Msg { return ui.PushViewMsg{View: next} }
+	case 1:
+		idx := v.table.Cursor()
+		if idx < 0 || idx >= len(v.roles) {
+			return nil
+		}
+		next := NewDBRoleDetailView(v.client, v.mount, v.roles[idx].Name)
+		next.SetInitialRawFormat(format)
+		return func() tea.Msg { return ui.PushViewMsg{View: next} }
+	case 2:
+		idx := v.table.Cursor()
+		if idx < 0 || idx >= len(v.staticRoles) {
+			return nil
+		}
+		next := NewDBStaticRoleDetailView(v.client, v.mount, v.staticRoles[idx].Name)
+		next.SetInitialRawFormat(format)
+		return func() tea.Msg { return ui.PushViewMsg{View: next} }
+	}
+	return nil
 }
 
 func (v *DatabaseView) handleEnter() tea.Cmd {
@@ -232,6 +268,7 @@ func (v *DatabaseView) KeyHints() []ui.KeyHint {
 		{Key: "↑↓", Desc: "navigate"},
 		{Key: "tab", Desc: "switch tab"},
 		{Key: "⏎", Desc: "view"},
+		{Key: "J/y", Desc: "raw view"},
 		{Key: "esc", Desc: "back"},
 	}
 }

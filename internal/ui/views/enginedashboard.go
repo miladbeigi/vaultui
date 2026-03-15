@@ -21,12 +21,15 @@ type engineConfigMsg struct {
 
 // EngineDashboardView displays detailed mount configuration for a secret engine.
 type EngineDashboardView struct {
-	client  *vault.Client
-	path    string
-	config  *vault.EngineConfig
-	table   *components.Table
-	err     error
-	loading bool
+	client           *vault.Client
+	path             string
+	config           *vault.EngineConfig
+	table            *components.Table
+	rawView          *components.RawView
+	rawMode          bool
+	pendingRawFormat *components.RawFormat
+	err              error
+	loading          bool
 }
 
 var _ ui.View = (*EngineDashboardView)(nil)
@@ -45,6 +48,10 @@ func NewEngineDashboardView(client *vault.Client, path string) *EngineDashboardV
 	}
 }
 
+func (v *EngineDashboardView) SetInitialRawFormat(format components.RawFormat) {
+	v.pendingRawFormat = &format
+}
+
 func (v *EngineDashboardView) Init() tea.Cmd {
 	return v.fetchConfig
 }
@@ -61,9 +68,48 @@ func (v *EngineDashboardView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		v.err = msg.err
 		v.config = msg.config
 		v.table.SetRows(v.buildRows())
+		if v.pendingRawFormat != nil {
+			v.toggleRaw(*v.pendingRawFormat)
+			v.pendingRawFormat = nil
+		}
 		return v, nil
 
 	case tea.KeyMsg:
+		if v.rawMode {
+			switch msg.String() {
+			case "j", "down":
+				v.rawView.ScrollDown()
+			case "k", "up":
+				v.rawView.ScrollUp()
+			case "g", "home":
+				v.rawView.GoToTop()
+			case "G", "end":
+				v.rawView.GoToBottom()
+			case "ctrl+d":
+				v.rawView.PageDown()
+			case "ctrl+u":
+				v.rawView.PageUp()
+			case "c":
+				if err := v.rawView.CopyContent(); err != nil {
+					v.rawView.Status = "✗ " + err.Error()
+				} else {
+					v.rawView.Status = "✓ Copied " + v.rawView.FormatLabel() + " to clipboard"
+				}
+			case "J":
+				v.toggleRaw(components.FormatJSON)
+			case "y":
+				v.toggleRaw(components.FormatYAML)
+			case "r":
+				v.rawMode = false
+				v.loading = true
+				v.client.InvalidateCache("sys/mounts/" + v.path)
+				return v, v.fetchConfig
+			case "esc":
+				v.rawMode = false
+				return v, nil
+			}
+			return v, nil
+		}
 		switch msg.String() {
 		case "j", "down":
 			v.table.MoveDown()
@@ -77,6 +123,10 @@ func (v *EngineDashboardView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 			v.loading = true
 			v.client.InvalidateCache("sys/mounts/" + v.path)
 			return v, v.fetchConfig
+		case "J":
+			v.toggleRaw(components.FormatJSON)
+		case "y":
+			v.toggleRaw(components.FormatYAML)
 		}
 	}
 
@@ -102,6 +152,12 @@ func (v *EngineDashboardView) View(width, height int) string {
 		return lipgloss.JoinVertical(lipgloss.Left, title, body)
 	}
 
+	if v.rawMode && v.rawView != nil {
+		v.rawView.SetSize(width, height-engineDashTitleHeight)
+		rawTitle := title + "  " + styles.SecondaryStyle.Render("["+v.rawView.FormatLabel()+"]")
+		return lipgloss.JoinVertical(lipgloss.Left, rawTitle, v.rawView.View())
+	}
+
 	return lipgloss.JoinVertical(lipgloss.Left, title, v.table.View())
 }
 
@@ -110,11 +166,85 @@ func (v *EngineDashboardView) Title() string {
 }
 
 func (v *EngineDashboardView) KeyHints() []ui.KeyHint {
+	if v.rawMode {
+		return []ui.KeyHint{
+			{Key: "↑↓", Desc: "scroll"},
+			{Key: "c", Desc: "copy"},
+			{Key: "J/y", Desc: "json/yaml"},
+			{Key: "r", Desc: "refresh"},
+			{Key: "esc", Desc: "table view"},
+		}
+	}
 	return []ui.KeyHint{
 		{Key: "↑↓", Desc: "navigate"},
+		{Key: "J/y", Desc: "json/yaml"},
 		{Key: "r", Desc: "refresh"},
 		{Key: "esc", Desc: "back"},
 	}
+}
+
+func (v *EngineDashboardView) toggleRaw(format components.RawFormat) {
+	if v.rawMode && v.rawView.Format() == format {
+		v.rawMode = false
+		return
+	}
+	data := v.buildData()
+	if data == nil {
+		return
+	}
+	if v.rawView == nil {
+		v.rawView = components.NewRawView(data, format)
+	} else {
+		v.rawView.SetData(data)
+		v.rawView.SetFormat(format)
+	}
+	v.rawView.Status = ""
+	v.rawMode = true
+}
+
+func (v *EngineDashboardView) buildData() map[string]interface{} {
+	if v.config == nil {
+		return nil
+	}
+	c := v.config
+	data := map[string]interface{}{
+		"Path":                    c.Path,
+		"Type":                    c.Type,
+		"Description":             engineValOrDash(c.Description),
+		"UUID":                    c.UUID,
+		"Accessor":                c.Accessor,
+		"Default Lease TTL":       formatEngineTTL(c.DefaultLeaseTTL),
+		"Max Lease TTL":           formatEngineTTL(c.MaxLeaseTTL),
+		"Force No Cache":          c.ForceNoCache,
+		"Local":                   c.Local,
+		"Seal Wrap":               c.SealWrap,
+		"External Entropy Access": c.ExternalEntropyAccess,
+	}
+	if c.RunningVersion != "" {
+		data["Running Version"] = c.RunningVersion
+	}
+	if c.PluginVersion != "" {
+		data["Plugin Version"] = c.PluginVersion
+	}
+	if c.ListingVisibility != "" {
+		data["Listing Visibility"] = c.ListingVisibility
+	}
+	if c.TokenType != "" {
+		data["Token Type"] = c.TokenType
+	}
+	if len(c.Options) > 0 {
+		data["Options"] = c.Options
+	}
+	if len(c.AuditNonHMACRequestKeys) > 0 {
+		data["Audit Non-HMAC Req Keys"] = strings.Join(c.AuditNonHMACRequestKeys, ", ")
+	}
+	if len(c.AuditNonHMACResponseKeys) > 0 {
+		data["Audit Non-HMAC Resp Keys"] = strings.Join(c.AuditNonHMACResponseKeys, ", ")
+	}
+	if len(c.PassthroughRequestHeaders) > 0 {
+		data["Passthrough Headers"] = strings.Join(c.PassthroughRequestHeaders, ", ")
+	}
+	return data
 }
 
 func (v *EngineDashboardView) buildRows() []components.Row {

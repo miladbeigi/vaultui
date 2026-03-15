@@ -94,6 +94,14 @@ func (v *EnginesView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 			cmd := v.handleDescribe()
 			return v, cmd
 		}
+		if msg.String() == "J" {
+			cmd := v.handleRawOpen(components.FormatJSON)
+			return v, cmd
+		}
+		if msg.String() == "y" {
+			cmd := v.handleRawOpen(components.FormatYAML)
+			return v, cmd
+		}
 	}
 
 	return v, nil
@@ -136,6 +144,7 @@ func (v *EnginesView) KeyHints() []ui.KeyHint {
 		{Key: "↑↓", Desc: "navigate"},
 		{Key: "⏎", Desc: "browse"},
 		{Key: "d", Desc: "describe"},
+		{Key: "J/y", Desc: "raw view"},
 		{Key: "esc", Desc: "back"},
 		{Key: "q", Desc: "quit"},
 	}
@@ -161,6 +170,18 @@ func (v *EnginesView) handleEnter() tea.Cmd {
 		kvV2 := engine.Version == "v2"
 		next = NewPathBrowserView(v.client, engine.Path, "", kvV2)
 	}
+	return func() tea.Msg {
+		return ui.PushViewMsg{View: next}
+	}
+}
+
+func (v *EnginesView) handleRawOpen(format components.RawFormat) tea.Cmd {
+	engine := v.SelectedEngine()
+	if engine == nil {
+		return nil
+	}
+	next := NewEngineDashboardView(v.client, engine.Path)
+	next.SetInitialRawFormat(format)
 	return func() tea.Msg {
 		return ui.PushViewMsg{View: next}
 	}

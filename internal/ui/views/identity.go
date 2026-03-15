@@ -93,6 +93,12 @@ func (v *IdentityView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		case key.Matches(msg, navKeys.Enter):
 			cmd := v.handleEnter()
 			return v, cmd
+		case msg.String() == "J":
+			cmd := v.handleRawOpen(components.FormatJSON)
+			return v, cmd
+		case msg.String() == "y":
+			cmd := v.handleRawOpen(components.FormatYAML)
+			return v, cmd
 		}
 	}
 
@@ -107,6 +113,25 @@ func (v *IdentityView) rebuildTable() {
 		v.table = components.NewTable(identityGroupColumns)
 		v.table.SetRows(v.buildGroupRows())
 	}
+}
+
+func (v *IdentityView) handleRawOpen(format components.RawFormat) tea.Cmd {
+	if v.tab == 0 {
+		idx := v.table.Cursor()
+		if idx < 0 || idx >= len(v.entities) {
+			return nil
+		}
+		next := NewIdentityDetailView(v.client, true, v.entities[idx].ID, v.entities[idx].Name)
+		next.SetInitialRawFormat(format)
+		return func() tea.Msg { return ui.PushViewMsg{View: next} }
+	}
+	idx := v.table.Cursor()
+	if idx < 0 || idx >= len(v.groups) {
+		return nil
+	}
+	next := NewIdentityDetailView(v.client, false, v.groups[idx].ID, v.groups[idx].Name)
+	next.SetInitialRawFormat(format)
+	return func() tea.Msg { return ui.PushViewMsg{View: next} }
 }
 
 func (v *IdentityView) handleEnter() tea.Cmd {
@@ -193,6 +218,7 @@ func (v *IdentityView) KeyHints() []ui.KeyHint {
 		{Key: "↑↓", Desc: "navigate"},
 		{Key: "tab", Desc: "switch tab"},
 		{Key: "⏎", Desc: "view"},
+		{Key: "J/y", Desc: "raw view"},
 		{Key: "esc", Desc: "back"},
 	}
 }

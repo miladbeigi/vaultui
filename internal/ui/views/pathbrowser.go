@@ -82,10 +82,27 @@ func (v *PathBrowserView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		case key.Matches(msg, navKeys.Enter):
 			cmd := v.handleEnter()
 			return v, cmd
+		case msg.String() == "J":
+			cmd := v.handleRawOpen(components.FormatJSON)
+			return v, cmd
+		case msg.String() == "y":
+			cmd := v.handleRawOpen(components.FormatYAML)
+			return v, cmd
 		}
 	}
 
 	return v, nil
+}
+
+func (v *PathBrowserView) handleRawOpen(format components.RawFormat) tea.Cmd {
+	entry := v.selectedEntry()
+	if entry == nil || entry.IsDir {
+		return nil
+	}
+	secretPath := v.path + entry.Name
+	next := NewSecretDetailView(v.client, v.mount, secretPath, v.kvV2)
+	next.SetInitialRawFormat(format)
+	return func() tea.Msg { return ui.PushViewMsg{View: next} }
 }
 
 func (v *PathBrowserView) handleEnter() tea.Cmd {
@@ -149,6 +166,7 @@ func (v *PathBrowserView) KeyHints() []ui.KeyHint {
 	return []ui.KeyHint{
 		{Key: "↑↓", Desc: "navigate"},
 		{Key: "⏎", Desc: "open"},
+		{Key: "J/y", Desc: "raw view"},
 		{Key: "esc", Desc: "back"},
 		{Key: "q", Desc: "quit"},
 	}

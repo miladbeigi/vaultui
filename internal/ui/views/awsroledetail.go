@@ -19,13 +19,16 @@ type awsRoleDetailLoadedMsg struct {
 
 // AWSRoleDetailView shows the full configuration of an AWS role.
 type AWSRoleDetailView struct {
-	client  *vault.Client
-	mount   string
-	name    string
-	detail  *vault.AWSRoleDetail
-	table   *components.Table
-	err     error
-	loading bool
+	client           *vault.Client
+	mount            string
+	name             string
+	detail           *vault.AWSRoleDetail
+	table            *components.Table
+	rawView          *components.RawView
+	err              error
+	loading          bool
+	rawMode          bool
+	pendingRawFormat *components.RawFormat
 }
 
 var _ ui.View = (*AWSRoleDetailView)(nil)
@@ -46,6 +49,10 @@ func NewAWSRoleDetailView(client *vault.Client, mount, name string) *AWSRoleDeta
 	}
 }
 
+func (v *AWSRoleDetailView) SetInitialRawFormat(format components.RawFormat) {
+	v.pendingRawFormat = &format
+}
+
 func (v *AWSRoleDetailView) Init() tea.Cmd {
 	return v.fetchData
 }
@@ -62,9 +69,48 @@ func (v *AWSRoleDetailView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		v.err = msg.err
 		v.detail = msg.detail
 		v.table.SetRows(v.buildRows())
+		if v.pendingRawFormat != nil {
+			v.toggleRaw(*v.pendingRawFormat)
+			v.pendingRawFormat = nil
+		}
 		return v, nil
 
 	case tea.KeyMsg:
+		if v.rawMode {
+			switch msg.String() {
+			case "j", "down":
+				v.rawView.ScrollDown()
+			case "k", "up":
+				v.rawView.ScrollUp()
+			case "g", "home":
+				v.rawView.GoToTop()
+			case "G", "end":
+				v.rawView.GoToBottom()
+			case "ctrl+d":
+				v.rawView.PageDown()
+			case "ctrl+u":
+				v.rawView.PageUp()
+			case "c":
+				if err := v.rawView.CopyContent(); err != nil {
+					v.rawView.Status = "✗ " + err.Error()
+				} else {
+					v.rawView.Status = "✓ Copied " + v.rawView.FormatLabel() + " to clipboard"
+				}
+			case "J":
+				v.toggleRaw(components.FormatJSON)
+			case "y":
+				v.toggleRaw(components.FormatYAML)
+			case "r":
+				v.rawMode = false
+				v.loading = true
+				return v, v.fetchData
+			case "esc":
+				v.rawMode = false
+				return v, nil
+			}
+			return v, nil
+		}
+
 		switch msg.String() {
 		case "j", "down":
 			v.table.MoveDown()
@@ -77,6 +123,10 @@ func (v *AWSRoleDetailView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		case "r":
 			v.loading = true
 			return v, v.fetchData
+		case "J":
+			v.toggleRaw(components.FormatJSON)
+		case "y":
+			v.toggleRaw(components.FormatYAML)
 		}
 	}
 
@@ -102,6 +152,12 @@ func (v *AWSRoleDetailView) View(width, height int) string {
 		return lipgloss.JoinVertical(lipgloss.Left, titleLine, body)
 	}
 
+	if v.rawMode && v.rawView != nil {
+		v.rawView.SetSize(width, height-awsRoleDetailTitleHeight)
+		rawTitle := titleLine + "  " + styles.SecondaryStyle.Render("["+v.rawView.FormatLabel()+"]")
+		return lipgloss.JoinVertical(lipgloss.Left, rawTitle, v.rawView.View())
+	}
+
 	return lipgloss.JoinVertical(lipgloss.Left, titleLine, v.table.View())
 }
 
@@ -110,11 +166,69 @@ func (v *AWSRoleDetailView) Title() string {
 }
 
 func (v *AWSRoleDetailView) KeyHints() []ui.KeyHint {
+	if v.rawMode {
+		return []ui.KeyHint{
+			{Key: "↑↓", Desc: "scroll"},
+			{Key: "c", Desc: "copy"},
+			{Key: "J/y", Desc: "json/yaml"},
+			{Key: "r", Desc: "refresh"},
+			{Key: "esc", Desc: "table view"},
+		}
+	}
 	return []ui.KeyHint{
 		{Key: "↑↓", Desc: "navigate"},
+		{Key: "J/y", Desc: "json/yaml"},
 		{Key: "r", Desc: "refresh"},
 		{Key: "esc", Desc: "back"},
 	}
+}
+
+func (v *AWSRoleDetailView) toggleRaw(format components.RawFormat) {
+	if v.rawMode && v.rawView.Format() == format {
+		v.rawMode = false
+		return
+	}
+	data := v.buildData()
+	if data == nil {
+		return
+	}
+	if v.rawView == nil {
+		v.rawView = components.NewRawView(data, format)
+	} else {
+		v.rawView.SetData(data)
+		v.rawView.SetFormat(format)
+	}
+	v.rawView.Status = ""
+	v.rawMode = true
+}
+
+func (v *AWSRoleDetailView) buildData() map[string]interface{} {
+	if v.detail == nil {
+		return nil
+	}
+	d := v.detail
+	data := map[string]interface{}{
+		"Name":             d.Name,
+		"Credential Types": awsValOrDash(strings.Join(d.CredentialTypes, ", ")),
+		"Default STS TTL":  awsValOrDash(d.DefaultSTSTTL),
+		"Max STS TTL":      awsValOrDash(d.MaxSTSTTL),
+	}
+	if len(d.RoleARNs) > 0 {
+		data["Role ARNs"] = strings.Join(d.RoleARNs, ", ")
+	}
+	if len(d.PolicyARNs) > 0 {
+		data["Policy ARNs"] = strings.Join(d.PolicyARNs, ", ")
+	}
+	if d.PolicyDocument != "" {
+		data["Policy Document"] = d.PolicyDocument
+	}
+	if len(d.IAMGroups) > 0 {
+		data["IAM Groups"] = strings.Join(d.IAMGroups, ", ")
+	}
+	if d.UserPath != "" {
+		data["User Path"] = d.UserPath
+	}
+	return data
 }
 
 func (v *AWSRoleDetailView) buildRows() []components.Row {

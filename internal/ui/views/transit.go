@@ -76,6 +76,12 @@ func (v *TransitView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		case key.Matches(msg, navKeys.Enter):
 			cmd := v.handleEnter()
 			return v, cmd
+		case msg.String() == "J":
+			cmd := v.handleRawOpen(components.FormatJSON)
+			return v, cmd
+		case msg.String() == "y":
+			cmd := v.handleRawOpen(components.FormatYAML)
+			return v, cmd
 		}
 	}
 
@@ -118,8 +124,19 @@ func (v *TransitView) KeyHints() []ui.KeyHint {
 	return []ui.KeyHint{
 		{Key: "↑↓", Desc: "navigate"},
 		{Key: "⏎", Desc: "view key"},
+		{Key: "J/y", Desc: "raw view"},
 		{Key: "esc", Desc: "back"},
 	}
+}
+
+func (v *TransitView) handleRawOpen(format components.RawFormat) tea.Cmd {
+	idx := v.table.Cursor()
+	if idx < 0 || idx >= len(v.keys) {
+		return nil
+	}
+	next := NewTransitKeyDetailView(v.client, v.mount, v.keys[idx].Name)
+	next.SetInitialRawFormat(format)
+	return func() tea.Msg { return ui.PushViewMsg{View: next} }
 }
 
 func (v *TransitView) handleEnter() tea.Cmd {

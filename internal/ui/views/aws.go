@@ -114,6 +114,12 @@ func (v *AWSView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		case key.Matches(msg, navKeys.Enter):
 			cmd := v.handleEnter()
 			return v, cmd
+		case msg.String() == "J":
+			cmd := v.handleRawOpen(components.FormatJSON)
+			return v, cmd
+		case msg.String() == "y":
+			cmd := v.handleRawOpen(components.FormatYAML)
+			return v, cmd
 		case msg.String() == "r":
 			v.loading = true
 			return v, v.fetchData
@@ -135,6 +141,28 @@ func (v *AWSView) rebuildTable() {
 		v.table = components.NewTable(awsLeaseColumns)
 		v.table.SetRows(v.buildLeaseRows())
 	}
+}
+
+func (v *AWSView) handleRawOpen(format components.RawFormat) tea.Cmd {
+	switch v.tab {
+	case 0:
+		idx := v.table.Cursor()
+		if idx < 0 || idx >= len(v.roles) {
+			return nil
+		}
+		next := NewAWSRoleDetailView(v.client, v.mount, v.roles[idx].Name)
+		next.SetInitialRawFormat(format)
+		return func() tea.Msg { return ui.PushViewMsg{View: next} }
+	case 2:
+		idx := v.table.Cursor()
+		if idx < 0 || idx >= len(v.leases) {
+			return nil
+		}
+		next := NewAWSLeaseDetailView(v.leases[idx])
+		next.SetInitialRawFormat(format)
+		return func() tea.Msg { return ui.PushViewMsg{View: next} }
+	}
+	return nil
 }
 
 func (v *AWSView) handleEnter() tea.Cmd {
@@ -268,6 +296,7 @@ func (v *AWSView) KeyHints() []ui.KeyHint {
 		{Key: "↑↓", Desc: "navigate"},
 		{Key: "tab", Desc: "switch tab"},
 		{Key: "⏎", Desc: "view"},
+		{Key: "J/y", Desc: "raw view"},
 		{Key: "r", Desc: "refresh"},
 		{Key: "esc", Desc: "back"},
 	}

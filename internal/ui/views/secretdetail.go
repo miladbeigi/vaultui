@@ -26,16 +26,19 @@ type statusClearMsg struct{}
 
 // SecretDetailView displays the key-value pairs of a single secret in a table.
 type SecretDetailView struct {
-	client    *vault.Client
-	mount     string
-	path      string
-	kvV2      bool
-	version   int
-	table     *components.Table
-	secret    *vault.SecretData
-	err       error
-	loading   bool
-	statusMsg string
+	client           *vault.Client
+	mount            string
+	path             string
+	kvV2             bool
+	version          int
+	table            *components.Table
+	rawView          *components.RawView
+	secret           *vault.SecretData
+	err              error
+	loading          bool
+	rawMode          bool
+	pendingRawFormat *components.RawFormat
+	statusMsg        string
 }
 
 var _ ui.View = (*SecretDetailView)(nil)
@@ -55,6 +58,10 @@ func NewSecretDetailView(client *vault.Client, mount, path string, kvV2 bool) *S
 		table:   components.NewTable(detailColumns),
 		loading: true,
 	}
+}
+
+func (v *SecretDetailView) SetInitialRawFormat(format components.RawFormat) {
+	v.pendingRawFormat = &format
 }
 
 func (v *SecretDetailView) Init() tea.Cmd {
@@ -85,6 +92,10 @@ func (v *SecretDetailView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		v.err = msg.err
 		v.secret = msg.data
 		v.table.SetRows(v.buildRows())
+		if v.pendingRawFormat != nil {
+			v.toggleRaw(*v.pendingRawFormat)
+			v.pendingRawFormat = nil
+		}
 		return v, nil
 
 	case statusClearMsg:
@@ -95,6 +106,37 @@ func (v *SecretDetailView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		if v.secret == nil {
 			return v, nil
 		}
+		if v.rawMode {
+			switch msg.String() {
+			case "j", "down":
+				v.rawView.ScrollDown()
+			case "k", "up":
+				v.rawView.ScrollUp()
+			case "g", "home":
+				v.rawView.GoToTop()
+			case "G", "end":
+				v.rawView.GoToBottom()
+			case "ctrl+d":
+				v.rawView.PageDown()
+			case "ctrl+u":
+				v.rawView.PageUp()
+			case "c":
+				if err := v.rawView.CopyContent(); err != nil {
+					v.rawView.Status = "✗ " + err.Error()
+				} else {
+					v.rawView.Status = "✓ Copied " + v.rawView.FormatLabel() + " to clipboard"
+				}
+			case "J":
+				v.toggleRaw(components.FormatJSON)
+			case "y":
+				v.toggleRaw(components.FormatYAML)
+			case "esc":
+				v.rawMode = false
+				return v, nil
+			}
+			return v, nil
+		}
+
 		switch {
 		case key.Matches(msg, navKeys.Up):
 			v.table.MoveUp()
@@ -114,6 +156,10 @@ func (v *SecretDetailView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		case key.Matches(msg, copyKeys.CopyJSON):
 			cmd := v.copyJSON()
 			return v, cmd
+		case msg.String() == "J":
+			v.toggleRaw(components.FormatJSON)
+		case msg.String() == "y":
+			v.toggleRaw(components.FormatYAML)
 		case msg.String() == "v":
 			if v.kvV2 {
 				next := NewVersionsView(v.client, v.mount, v.path)
@@ -188,6 +234,12 @@ func (v *SecretDetailView) View(width, height int) string {
 		return lipgloss.JoinVertical(lipgloss.Left, breadcrumb, body)
 	}
 
+	if v.rawMode && v.rawView != nil {
+		v.rawView.SetSize(width, height-detailBreadcrumbHeight)
+		rawTitle := breadcrumb + "  " + styles.SecondaryStyle.Render("["+v.rawView.FormatLabel()+"]")
+		return lipgloss.JoinVertical(lipgloss.Left, rawTitle, v.rawView.View())
+	}
+
 	body := lipgloss.JoinVertical(lipgloss.Left, breadcrumb, v.table.View())
 
 	if v.statusMsg != "" {
@@ -225,16 +277,55 @@ func (v *SecretDetailView) Title() string {
 }
 
 func (v *SecretDetailView) KeyHints() []ui.KeyHint {
+	if v.rawMode {
+		return []ui.KeyHint{
+			{Key: "↑↓", Desc: "scroll"},
+			{Key: "c", Desc: "copy"},
+			{Key: "J/y", Desc: "json/yaml"},
+			{Key: "esc", Desc: "table view"},
+		}
+	}
 	hints := []ui.KeyHint{
 		{Key: "↑↓", Desc: "navigate"},
 		{Key: "c", Desc: "copy value"},
 		{Key: "C", Desc: "copy JSON"},
+		{Key: "J/y", Desc: "json/yaml"},
 	}
 	if v.kvV2 {
 		hints = append(hints, ui.KeyHint{Key: "v", Desc: "versions"})
 	}
 	hints = append(hints, ui.KeyHint{Key: "esc", Desc: "back"})
 	return hints
+}
+
+func (v *SecretDetailView) toggleRaw(format components.RawFormat) {
+	if v.rawMode && v.rawView.Format() == format {
+		v.rawMode = false
+		return
+	}
+	data := v.buildData()
+	if data == nil {
+		return
+	}
+	if v.rawView == nil {
+		v.rawView = components.NewRawView(data, format)
+	} else {
+		v.rawView.SetData(data)
+		v.rawView.SetFormat(format)
+	}
+	v.rawView.Status = ""
+	v.rawMode = true
+}
+
+func (v *SecretDetailView) buildData() map[string]interface{} {
+	if v.secret == nil {
+		return nil
+	}
+	data := make(map[string]interface{}, len(v.secret.Keys))
+	for _, k := range v.secret.Keys {
+		data[k] = v.secret.Data[k]
+	}
+	return data
 }
 
 func (v *SecretDetailView) buildRows() []components.Row {
