@@ -10,6 +10,14 @@ services:
     tmpfs:
       - /var/lib/postgresql/data
 
+  localstack:
+    image: localstack/localstack:3
+    environment:
+      SERVICES: iam,sts
+      EAGER_SERVICE_LOADING: 1
+    ports:
+      - "4566:4566"
+
   vault:
     image: hashicorp/vault:1.15
     container_name: vaultui-dev
@@ -29,6 +37,7 @@ services:
     depends_on:
       - vault
       - postgres
+      - localstack
     restart: "no"
     environment:
       VAULT_ADDR: http://vault:8200

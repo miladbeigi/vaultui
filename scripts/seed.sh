@@ -200,4 +200,43 @@ vault write database/static-roles/ops-monitoring \
   username="postgres" \
   rotation_period=86400
 
+# ── AWS secrets engine (backed by LocalStack) ─────────────
+vault secrets enable aws
+
+# Wait for LocalStack to be ready
+for i in $(seq 1 15); do
+  if wget -qO- http://localstack:4566/_localstack/health 2>/dev/null | grep -q '"iam"'; then
+    break
+  fi
+  echo "Waiting for LocalStack... ($i/15)"
+  sleep 2
+done
+
+vault write aws/config/root \
+  access_key=test \
+  secret_key=test \
+  region=us-east-1 \
+  iam_endpoint=http://localstack:4566 \
+  sts_endpoint=http://localstack:4566
+
+vault write aws/config/lease \
+  lease=30m \
+  lease_max=1h
+
+vault write aws/roles/deploy-iam-user \
+  credential_type=iam_user \
+  policy_arns="arn:aws:iam::aws:policy/ReadOnlyAccess"
+
+vault write aws/roles/ci-assumed-role \
+  credential_type=assumed_role \
+  role_arns="arn:aws:iam::000000000000:role/ci-role" \
+  default_sts_ttl=1800 \
+  max_sts_ttl=3600
+
+vault write aws/roles/readonly-federation \
+  credential_type=federation_token \
+  policy_document='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:ListBucket"],"Resource":"*"}]}' \
+  default_sts_ttl=900 \
+  max_sts_ttl=3600
+
 echo "Seed data loaded successfully."

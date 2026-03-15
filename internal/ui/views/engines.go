@@ -155,6 +155,8 @@ func (v *EnginesView) handleEnter() tea.Cmd {
 		next = NewTransitView(v.client, engine.Path)
 	case "database":
 		next = NewDatabaseView(v.client, engine.Path)
+	case "aws":
+		next = NewAWSView(v.client, engine.Path)
 	default:
 		kvV2 := engine.Version == "v2"
 		next = NewPathBrowserView(v.client, engine.Path, "", kvV2)

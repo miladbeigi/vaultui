@@ -647,6 +647,7 @@ keys:
 - [ ] Leases browser (global, read-only across all engines)
 - [ ] Lease renew/revoke (write action)
 - [ ] Generate database credentials (write action — `database/creds/<role>`)
+- [ ] Headless scripting for database engine (`vaultui get db-connections`, `db-roles`, `db-static-roles`, `db-connection <name>`, `db-role <name>`, `db-static-role <name>`)
 - [ ] Database static role manual rotation (write action — `database/rotate-role/<role>`)
 - [ ] Generate AWS credentials (write action — `aws/creds/<role>`, `aws/sts/<role>`)
 - [ ] Create/edit secrets (form overlay, write action)

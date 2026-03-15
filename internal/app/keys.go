@@ -26,7 +26,7 @@ type KeyMap struct {
 	PageDown key.Binding
 	PageUp   key.Binding
 
-	// Quick-jump (1-7)
+	// Quick-jump (1-8)
 	Jump1 key.Binding
 	Jump2 key.Binding
 	Jump3 key.Binding
@@ -34,6 +34,7 @@ type KeyMap struct {
 	Jump5 key.Binding
 	Jump6 key.Binding
 	Jump7 key.Binding
+	Jump8 key.Binding
 }
 
 var keys = defaultKeyMap()
@@ -101,6 +102,7 @@ func defaultKeyMap() KeyMap {
 		Jump5: key.NewBinding(key.WithKeys("5"), key.WithHelp("5", "pki")),
 		Jump6: key.NewBinding(key.WithKeys("6"), key.WithHelp("6", "transit")),
 		Jump7: key.NewBinding(key.WithKeys("7"), key.WithHelp("7", "database")),
+		Jump8: key.NewBinding(key.WithKeys("8"), key.WithHelp("8", "aws")),
 	}
 }
 

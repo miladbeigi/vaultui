@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-03-15
+
+### Added
+
+- AWS secrets engine browser with tabbed view (Roles, Config, Leases)
+- Role detail view showing credential type, policy ARNs, role ARNs, policy document, STS TTLs
+- Config viewer showing access key, region, IAM/STS endpoints, max retries, lease config
+- Leases browser with role, short ID, TTL, and issue time columns
+- Lease detail view showing full lease ID, TTL, issue/expire time, renewable status
+- Jump shortcut `8` and `:aws` command for quick access to AWS engine
+- LocalStack container in Docker Compose for AWS engine testing
+- Seed data: AWS engine config pointing at LocalStack, 3 roles (iam_user, assumed_role, federation_token)
+- Headless DB scripting added to deferred items in DESIGN.md
+
 ## [0.5.0] - 2026-03-15
 
 ### Added

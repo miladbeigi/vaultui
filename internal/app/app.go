@@ -22,6 +22,7 @@ type healthMsg struct {
 
 var commandNames = []string{
 	"auth",
+	"aws",
 	"ctx",
 	"dash",
 	"dashboard",
@@ -170,6 +171,8 @@ func (m Model) handleJumpKey(msg tea.KeyMsg) ui.View {
 		return views.NewTransitView(m.client, "transit/")
 	case key.Matches(msg, keys.Jump7):
 		return views.NewDatabaseView(m.client, "database/")
+	case key.Matches(msg, keys.Jump8):
+		return views.NewAWSView(m.client, "aws/")
 	}
 	return nil
 }
@@ -276,6 +279,9 @@ func (m Model) executeCommand() (tea.Model, tea.Cmd) {
 		return m, c
 	case cmd == "db" || cmd == "database":
 		c := m.router.ResetToRoot(views.NewDatabaseView(m.client, "database/"))
+		return m, c
+	case cmd == "aws":
+		c := m.router.ResetToRoot(views.NewAWSView(m.client, "aws/"))
 		return m, c
 	case cmd == "token":
 		v := views.NewTokenInspectorView(m.client)
