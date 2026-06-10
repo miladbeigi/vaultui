@@ -9,7 +9,7 @@ A **k9s-inspired terminal UI** for [HashiCorp Vault](https://www.vaultproject.io
 Browse secrets, auth methods, policies, and more — without leaving your terminal.
 
 <p align="center">
-  <img src="docs/images/dashboard.gif" alt="VaultUI Dashboard" width="800">
+  <img src="docs/images/dashboard.png" alt="VaultUI Dashboard" width="800">
 </p>
 
 ## Features
@@ -30,6 +30,12 @@ Browse secrets, auth methods, policies, and more — without leaving your termin
 - **Clipboard with auto-clear** — copied secrets are cleared after 30 seconds
 - **Headless mode** — `vaultui get` subcommand for JSON output in scripts
 - **Vim-style navigation** — `j`/`k`, `g`/`G`, `Ctrl+D`/`Ctrl+U`, `Enter`, `Esc`
+
+## Demo
+
+<p align="center">
+  <img src="docs/images/dashboard.gif" alt="VaultUI demo" width="800">
+</p>
 
 ## Install
 
