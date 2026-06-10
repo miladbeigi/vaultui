@@ -9,7 +9,7 @@ A **k9s-inspired terminal UI** for [HashiCorp Vault](https://www.vaultproject.io
 Browse secrets, auth methods, policies, and more — without leaving your terminal.
 
 <p align="center">
-  <img src="docs/images/dashboard.png" alt="VaultUI Dashboard" width="800">
+  <img src="docs/images/dashboard.gif" alt="VaultUI Dashboard" width="800">
 </p>
 
 ## Features
@@ -28,11 +28,8 @@ Browse secrets, auth methods, policies, and more — without leaving your termin
 - **Command palette** — `:secrets`, `:auth`, `:policies`, `:pki`, `:transit`, `:identity`, `:ctx`
 - **Configurable keybindings** — override defaults via config file
 - **Clipboard with auto-clear** — copied secrets are cleared after 30 seconds
-- **Responsive layout** — compact header for narrow terminals, minimum size guard
-- **Error overlay** — contextual troubleshooting hints for common Vault errors
 - **Headless mode** — `vaultui get` subcommand for JSON output in scripts
 - **Vim-style navigation** — `j`/`k`, `g`/`G`, `Ctrl+D`/`Ctrl+U`, `Enter`, `Esc`
-- **Stack-based routing** — every view preserves scroll position and state
 
 ## Install
 
@@ -120,45 +117,45 @@ vaultui get secret secret/apps/myapp/config | jq .db_host
 
 ## Keybindings
 
-| Key | Action |
-|-----|--------|
-| `j` / `↓` | Move down |
-| `k` / `↑` | Move up |
-| `Enter` | Open / drill in |
-| `Esc` / `←` | Go back |
-| `g` / `Home` | Jump to top |
-| `G` / `End` | Jump to bottom |
-| `Ctrl+D` | Page down |
-| `Ctrl+U` | Page up |
-| `1` | Secret Engines |
-| `2` | Auth Methods |
-| `3` | Policies |
-| `4` | Identity |
-| `5` | PKI |
-| `6` | Transit |
-| `Tab` | Switch tab (where applicable) |
-| `:` | Command palette |
-| `c` | Copy selected value |
-| `C` | Copy secret as JSON |
-| `v` | Version history (KV v2 detail) |
-| `d` | Diff versions (version history) |
-| `q` | Quit |
+| Key          | Action                          |
+| ------------ | ------------------------------- |
+| `j` / `↓`    | Move down                       |
+| `k` / `↑`    | Move up                         |
+| `Enter`      | Open / drill in                 |
+| `Esc` / `←`  | Go back                         |
+| `g` / `Home` | Jump to top                     |
+| `G` / `End`  | Jump to bottom                  |
+| `Ctrl+D`     | Page down                       |
+| `Ctrl+U`     | Page up                         |
+| `1`          | Secret Engines                  |
+| `2`          | Auth Methods                    |
+| `3`          | Policies                        |
+| `4`          | Identity                        |
+| `5`          | PKI                             |
+| `6`          | Transit                         |
+| `Tab`        | Switch tab (where applicable)   |
+| `:`          | Command palette                 |
+| `c`          | Copy selected value             |
+| `C`          | Copy secret as JSON             |
+| `v`          | Version history (KV v2 detail)  |
+| `d`          | Diff versions (version history) |
+| `q`          | Quit                            |
 
 ## Command Palette
 
 Press `:` to open, then type a command:
 
-| Command | Action |
-|---------|--------|
-| `:secrets` | Go to Secret Engines |
-| `:auth` | Go to Auth Methods |
-| `:policies` | Go to Policies |
-| `:identity` | Go to Identity |
-| `:pki` | Go to PKI engine |
-| `:transit` | Go to Transit engine |
-| `:ctx` | Switch Vault context |
-| `:dash` | Go to Dashboard |
-| `:q` / `:quit` | Quit |
+| Command        | Action               |
+| -------------- | -------------------- |
+| `:secrets`     | Go to Secret Engines |
+| `:auth`        | Go to Auth Methods   |
+| `:policies`    | Go to Policies       |
+| `:identity`    | Go to Identity       |
+| `:pki`         | Go to PKI engine     |
+| `:transit`     | Go to Transit engine |
+| `:ctx`         | Switch Vault context |
+| `:dash`        | Go to Dashboard      |
+| `:q` / `:quit` | Quit                 |
 
 ## Configuration
 
@@ -204,13 +201,13 @@ Switch contexts inside the TUI with `:ctx` or by editing the config file.
 
 ## Tech Stack
 
-| Layer | Choice |
-|-------|--------|
-| Language | [Go](https://go.dev) |
-| TUI Framework | [Bubble Tea](https://github.com/charmbracelet/bubbletea) |
-| Styling | [Lipgloss](https://github.com/charmbracelet/lipgloss) |
-| Vault Client | [vault/api](https://pkg.go.dev/github.com/hashicorp/vault/api) |
-| CLI | [Cobra](https://github.com/spf13/cobra) + [Viper](https://github.com/spf13/viper) |
+| Layer         | Choice                                                                            |
+| ------------- | --------------------------------------------------------------------------------- |
+| Language      | [Go](https://go.dev)                                                              |
+| TUI Framework | [Bubble Tea](https://github.com/charmbracelet/bubbletea)                          |
+| Styling       | [Lipgloss](https://github.com/charmbracelet/lipgloss)                             |
+| Vault Client  | [vault/api](https://pkg.go.dev/github.com/hashicorp/vault/api)                    |
+| CLI           | [Cobra](https://github.com/spf13/cobra) + [Viper](https://github.com/spf13/viper) |
 
 ## Project Structure
 
