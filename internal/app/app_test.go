@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/miladbeigi/vaultui/internal/ui/views"
 	"github.com/miladbeigi/vaultui/internal/vault"
 )
 
@@ -542,5 +543,119 @@ func TestFilterCommands_Empty(t *testing.T) {
 	matches := m.filterCommands("")
 	if len(matches) != len(commandNames) {
 		t.Errorf("expected all commands for empty prefix, got %d", len(matches))
+	}
+}
+
+func helpKeyMsg() tea.KeyMsg {
+	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}}
+}
+
+func TestHelpOverlay_Open(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, nil, "")
+
+	updated, cmd := m.Update(helpKeyMsg())
+	model := updated.(Model)
+
+	if cmd != nil {
+		t.Error("expected no command when opening help")
+	}
+	if !model.helpActive {
+		t.Error("expected help overlay to be active after '?'")
+	}
+}
+
+func TestHelpOverlay_ToggleClose(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, nil, "")
+	m.helpActive = true
+
+	updated, _ := m.Update(helpKeyMsg())
+	model := updated.(Model)
+
+	if model.helpActive {
+		t.Error("expected help overlay to close when '?' pressed again")
+	}
+}
+
+func TestHelpOverlay_CloseOnEsc(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, nil, "")
+	m.helpActive = true
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	model := updated.(Model)
+
+	if model.helpActive {
+		t.Error("expected help overlay to close on Esc")
+	}
+}
+
+func TestHelpOverlay_KeysDontLeak(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, nil, "")
+	m.helpActive = true
+	m.ready = true
+	m.width = 120
+	m.height = 40
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
+	model := updated.(Model)
+
+	if model.router.Depth() != 1 {
+		t.Error("expected 'j' to be swallowed while help is active")
+	}
+}
+
+func TestHelpOverlay_BlockedWhenCmdActive(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, nil, "")
+	m.cmdActive = true
+
+	updated, _ := m.Update(helpKeyMsg())
+	model := updated.(Model)
+
+	if model.helpActive {
+		t.Error("expected help not to open while command palette is active")
+	}
+	if model.cmdInput != "?" {
+		t.Errorf("expected '?' typed into command input, got %q", model.cmdInput)
+	}
+}
+
+func TestHelpOverlay_RenderedInBody(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, nil, "")
+	m.ready = true
+	m.width = 120
+	m.height = 40
+	m.helpActive = true
+
+	view := m.View()
+	if !strings.Contains(view, "Keyboard Shortcuts") {
+		t.Error("expected view to contain help overlay title")
+	}
+	if !strings.Contains(view, "Quick Jump") {
+		t.Error("expected view to contain global help sections")
+	}
+	if !strings.Contains(view, "close") {
+		t.Error("expected status bar to show close hint")
+	}
+}
+
+func TestHelpOverlay_EscDoesNotPopRouter(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, nil, "")
+	m.helpActive = true
+	_ = m.router.Push(views.NewEnginesView(client))
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	model := updated.(Model)
+
+	if model.helpActive {
+		t.Error("expected help to close on Esc")
+	}
+	if model.router.Depth() != 2 {
+		t.Errorf("expected Esc in help overlay not to pop router, depth=%d", model.router.Depth())
 	}
 }

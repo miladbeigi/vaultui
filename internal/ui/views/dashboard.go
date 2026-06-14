@@ -242,6 +242,7 @@ func (v *DashboardView) KeyHints() []ui.KeyHint {
 	return []ui.KeyHint{
 		{Key: "1-8", Desc: "quick nav"},
 		{Key: ":", Desc: "command"},
+		{Key: "?", Desc: "help"},
 		{Key: "q", Desc: "quit"},
 	}
 }

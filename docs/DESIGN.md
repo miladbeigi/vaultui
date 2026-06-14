@@ -604,6 +604,7 @@ keys:
 - [x] Responsive layout (compact header for narrow terminals, minimum size guard)
 - [x] Error overlay with troubleshooting hints (contextual advice per error type)
 - [x] `--output json` flag / `vaultui get` subcommand for headless scripting
+- [x] Help overlay (`?` keybinding to show all keybindings)
 
 ### Phase 5 — Observability & Productivity
 > **Goal:** Deeper insight into Vault state, faster navigation workflows.
@@ -640,7 +641,6 @@ keys:
 > Items deprioritised from their original phase. Will revisit when needed.
 
 - [ ] Live audit log stream (needs reliable remote access — file tail, socket audit device, or sys/monitor)
-- [ ] Help overlay (`?` keybinding to show all keybindings)
 - [ ] Quit confirmation (`q` smart quit — confirm or only from root view)
 - [ ] Fuzzy filter on table views (`/` to filter rows in real-time)
 - [ ] Command palette centered modal or status bar replacement layout

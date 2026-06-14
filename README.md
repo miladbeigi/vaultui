@@ -141,6 +141,7 @@ vaultui get secret secret/apps/myapp/config | jq .db_host
 | `6`          | Transit                         |
 | `Tab`        | Switch tab (where applicable)   |
 | `:`          | Command palette                 |
+| `?`          | Show help overlay               |
 | `c`          | Copy selected value             |
 | `C`          | Copy secret as JSON             |
 | `v`          | Version history (KV v2 detail)  |

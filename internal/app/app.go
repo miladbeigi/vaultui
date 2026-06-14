@@ -52,6 +52,7 @@ type Model struct {
 	quitting    bool
 	initCmd     tea.Cmd
 	cmdActive   bool
+	helpActive  bool
 	cmdInput    string
 	cmdError    string
 	cmdMatches  []string
@@ -125,11 +126,18 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updateCommandInput(msg)
 	}
 
+	if m.helpActive {
+		return m.handleHelpKeyMsg(msg)
+	}
+
 	switch {
 	case key.Matches(msg, keys.Quit), key.Matches(msg, keys.ForceQuit):
 		m.stopRenewer()
 		m.quitting = true
 		return m, tea.Quit
+	case key.Matches(msg, keys.Help):
+		m.helpActive = true
+		return m, nil
 	case key.Matches(msg, keys.Back):
 		if m.router.Pop() {
 			return m, nil
@@ -175,6 +183,20 @@ func (m Model) handleJumpKey(msg tea.KeyMsg) ui.View {
 		return views.NewAWSView(m.client, "aws/")
 	}
 	return nil
+}
+
+func (m Model) handleHelpKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case key.Matches(msg, keys.Quit), key.Matches(msg, keys.ForceQuit):
+		m.stopRenewer()
+		m.quitting = true
+		return m, tea.Quit
+	case key.Matches(msg, keys.Help), key.Matches(msg, keys.Back):
+		m.helpActive = false
+		return m, nil
+	default:
+		return m, nil
+	}
 }
 
 func (m Model) updateCommandInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -574,11 +596,21 @@ func (m Model) renderBody() string {
 	if m.cmdActive {
 		return lipgloss.JoinVertical(lipgloss.Left, cmdLine, viewContent)
 	}
+
+	if m.helpActive {
+		return m.buildHelpOverlay().View(bw, bh)
+	}
+
 	return viewContent
 }
 
 func (m Model) renderStatusBar() string {
 	var hints string
+
+	if m.helpActive {
+		hints = styles.HintKeyStyle.Render("esc/?") + styles.HintDescStyle.Render(" close")
+		return styles.StatusBarStyle.Width(m.width).Render(hints)
+	}
 
 	if current := m.router.Current(); current != nil {
 		for i, h := range current.KeyHints() {

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Help overlay (`?`) showing global keybindings and current view shortcuts
+
 ## [0.6.0] - 2026-03-15
 
 ### Added
