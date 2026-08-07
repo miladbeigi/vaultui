@@ -20,6 +20,12 @@ type healthMsg struct {
 	err    error
 }
 
+type defaultPathMsg struct {
+	path    string
+	engines []vault.MountEntry
+	err     error
+}
+
 var commandNames = []string{
 	"auth",
 	"aws",
@@ -43,6 +49,7 @@ type Model struct {
 	cfg         *config.Config
 	cfgPath     string
 	router      *Router
+	defaultPath string
 	health      *vault.HealthStatus
 	healthErr   error
 	renewer     *vault.TokenRenewer
@@ -70,17 +77,23 @@ func New(client *vault.Client, cfg *config.Config, cfgPath string) Model {
 	}
 
 	return Model{
-		client:  client,
-		cfg:     cfg,
-		cfgPath: cfgPath,
-		router:  router,
-		initCmd: dashView.Init(),
+		client:      client,
+		cfg:         cfg,
+		cfgPath:     cfgPath,
+		router:      router,
+		defaultPath: defaultPathForConfig(cfg),
+		initCmd:     dashView.Init(),
 	}
 }
 
 func (m Model) Init() tea.Cmd {
 	m.renewer = vault.StartTokenRenewer(m.client)
-	return tea.Batch(m.fetchHealth, m.initCmd)
+
+	cmds := []tea.Cmd{m.fetchHealth, m.initCmd}
+	if m.defaultPath != "" {
+		cmds = append(cmds, m.fetchDefaultPath(m.defaultPath))
+	}
+	return tea.Batch(cmds...)
 }
 
 func (m Model) fetchHealth() tea.Msg {
@@ -100,6 +113,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.health = msg.status
 		m.healthErr = msg.err
 		return m, nil
+
+	case defaultPathMsg:
+		return m.applyDefaultPath(msg)
 
 	case ui.PushViewMsg:
 		cmd := m.router.Push(msg.View)
@@ -140,6 +156,9 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case key.Matches(msg, keys.Back):
 		if m.router.Pop() {
+			if current := m.router.Current(); current != nil {
+				return m, current.Init()
+			}
 			return m, nil
 		}
 	case key.Matches(msg, keys.Command):
@@ -329,7 +348,7 @@ func (m Model) jumpToPath(fullPath string) (tea.Model, tea.Cmd) {
 	if fullPath == "" {
 		m.cmdActive = true
 		m.cmdInput = "go "
-		m.cmdError = "path required: go <mount/path>"
+		m.cmdError = "path required: go <path>"
 		return m, nil
 	}
 
@@ -341,6 +360,123 @@ func (m Model) jumpToPath(fullPath string) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	viewsForPath, err := m.viewsForPath(fullPath, engines)
+	if err != nil {
+		m.cmdActive = true
+		m.cmdInput = "go " + fullPath
+		m.cmdError = err.Error()
+		return m, nil
+	}
+
+	c := m.resetToPathStack(viewsForPath)
+	return m, c
+}
+
+func (m Model) fetchDefaultPath(path string) tea.Cmd {
+	return func() tea.Msg {
+		engines, err := m.client.ListSecretEngines()
+		return defaultPathMsg{
+			path:    path,
+			engines: engines,
+			err:     err,
+		}
+	}
+}
+
+func (m Model) applyDefaultPath(msg defaultPathMsg) (tea.Model, tea.Cmd) {
+	if msg.err != nil {
+		m.cmdActive = true
+		m.cmdInput = "go " + msg.path
+		m.cmdError = "failed to list engines"
+		return m, nil
+	}
+
+	viewsForPath, err := m.viewsForPath(msg.path, msg.engines)
+	if err != nil {
+		m.cmdActive = true
+		m.cmdInput = "go " + msg.path
+		m.cmdError = err.Error()
+		return m, nil
+	}
+
+	c := m.resetToPathStack(viewsForPath)
+	return m, c
+}
+
+func (m Model) viewsForPath(fullPath string, engines []vault.MountEntry) ([]ui.View, error) {
+	mount, subPath, kvV2, err := resolvePath(fullPath, engines)
+	if err != nil {
+		return nil, err
+	}
+
+	isDir := subPath == "" || strings.HasSuffix(subPath, "/")
+	if subPath == "" || strings.HasSuffix(subPath, "/") {
+		return m.pathBrowserStack(mount, subPath, kvV2), nil
+	}
+
+	if pathHasChildren(m.client, mount, subPath, kvV2) {
+		isDir = true
+		subPath += "/"
+	}
+
+	stack := m.pathBrowserStack(mount, parentPath(subPath), kvV2)
+	if isDir {
+		return append(stack, views.NewPathBrowserView(m.client, mount, subPath, kvV2)), nil
+	}
+	return append(stack, views.NewSecretDetailView(m.client, mount, subPath, kvV2)), nil
+}
+
+func (m Model) pathBrowserStack(mount, subPath string, kvV2 bool) []ui.View {
+	if subPath == "" {
+		return []ui.View{views.NewPathBrowserView(m.client, mount, "", kvV2)}
+	}
+
+	trimmed := strings.TrimSuffix(subPath, "/")
+	parts := strings.Split(trimmed, "/")
+	stack := make([]ui.View, 0, len(parts)+1)
+	stack = append(stack, views.NewPathBrowserView(m.client, mount, "", kvV2))
+
+	var current string
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		current += part + "/"
+		stack = append(stack, views.NewPathBrowserView(m.client, mount, current, kvV2))
+	}
+
+	return stack
+}
+
+func parentPath(subPath string) string {
+	trimmed := strings.TrimSuffix(subPath, "/")
+	idx := strings.LastIndex(trimmed, "/")
+	if idx < 0 {
+		return ""
+	}
+	return trimmed[:idx+1]
+}
+
+func pathHasChildren(client *vault.Client, mount, subPath string, kvV2 bool) bool {
+	entries, err := client.ListSecrets(mount, subPath+"/", kvV2)
+	return err == nil && len(entries) > 0
+}
+
+func (m Model) resetToPathStack(stack []ui.View) tea.Cmd {
+	if len(stack) == 0 {
+		return nil
+	}
+
+	if len(m.router.stack) > 1 {
+		m.router.stack = m.router.stack[:1]
+	}
+	for _, v := range stack {
+		m.router.stack = append(m.router.stack, v)
+	}
+	return stack[len(stack)-1].Init()
+}
+
+func resolvePath(fullPath string, engines []vault.MountEntry) (string, string, bool, error) {
 	var mount string
 	var subPath string
 	var kvV2 bool
@@ -353,21 +489,37 @@ func (m Model) jumpToPath(fullPath string) (tea.Model, tea.Cmd) {
 		}
 	}
 	if mount == "" {
-		m.cmdActive = true
-		m.cmdInput = "go " + fullPath
-		m.cmdError = fmt.Sprintf("no engine found for path: %s", fullPath)
-		return m, nil
+		mount, subPath, kvV2 = defaultMountForPath(fullPath, engines)
+	}
+	if mount == "" {
+		return "", "", false, fmt.Errorf("no engine found for path: %s", fullPath)
 	}
 
-	if subPath == "" || strings.HasSuffix(subPath, "/") {
-		v := views.NewPathBrowserView(m.client, mount, subPath, kvV2)
-		c := m.router.ResetToRoot(v)
-		return m, c
+	return mount, subPath, kvV2, nil
+}
+
+func defaultMountForPath(path string, engines []vault.MountEntry) (string, string, bool) {
+	var singleKVMount string
+	var singleKVVersion string
+	kvCount := 0
+
+	for _, e := range engines {
+		if e.Type != "kv" {
+			continue
+		}
+		if e.Path == "secret/" {
+			return e.Path, path, e.Version == "v2"
+		}
+		singleKVMount = e.Path
+		singleKVVersion = e.Version
+		kvCount++
 	}
 
-	v := views.NewSecretDetailView(m.client, mount, subPath, kvV2)
-	c := m.router.ResetToRoot(v)
-	return m, c
+	if kvCount == 1 {
+		return singleKVMount, path, singleKVVersion == "v2"
+	}
+
+	return "", "", false
 }
 
 func (m *Model) stopRenewer() {
@@ -406,6 +558,7 @@ func (m Model) switchContext(ctx config.Context) (tea.Model, tea.Cmd) {
 	m.stopRenewer()
 	m.client = newClient
 	m.cfg.CurrentContext = ctx.Name
+	m.defaultPath = strings.TrimSpace(ctx.DefaultPath)
 	m.health = nil
 	m.healthErr = nil
 
@@ -415,10 +568,25 @@ func (m Model) switchContext(ctx config.Context) (tea.Model, tea.Cmd) {
 
 	router := NewRouter()
 	dashView := views.NewDashboardView(m.client)
-	router.Push(dashView)
+	dashCmd := router.Push(dashView)
 	m.router = router
 
-	return m, tea.Batch(m.fetchHealth, dashView.Init())
+	cmds := []tea.Cmd{m.fetchHealth, dashCmd}
+	if m.defaultPath != "" {
+		cmds = append(cmds, m.fetchDefaultPath(m.defaultPath))
+	}
+	return m, tea.Batch(cmds...)
+}
+
+func defaultPathForConfig(cfg *config.Config) string {
+	if cfg == nil {
+		return ""
+	}
+	ctx := cfg.CurrentCtx()
+	if ctx == nil {
+		return ""
+	}
+	return strings.TrimSpace(ctx.DefaultPath)
 }
 
 const headerHeight = 4    // 1 top pad + 1 content + 1 bottom pad + 1 border
