@@ -470,16 +470,11 @@ func (m Model) resetToPathStack(stack []ui.View) tea.Cmd {
 	if len(m.router.stack) > 1 {
 		m.router.stack = m.router.stack[:1]
 	}
-	for _, v := range stack {
-		m.router.stack = append(m.router.stack, v)
-	}
+	m.router.stack = append(m.router.stack, stack...)
 	return stack[len(stack)-1].Init()
 }
 
-func resolvePath(fullPath string, engines []vault.MountEntry) (string, string, bool, error) {
-	var mount string
-	var subPath string
-	var kvV2 bool
+func resolvePath(fullPath string, engines []vault.MountEntry) (mount, subPath string, kvV2 bool, err error) {
 	for _, e := range engines {
 		if strings.HasPrefix(fullPath, e.Path) {
 			mount = e.Path
@@ -498,7 +493,7 @@ func resolvePath(fullPath string, engines []vault.MountEntry) (string, string, b
 	return mount, subPath, kvV2, nil
 }
 
-func defaultMountForPath(path string, engines []vault.MountEntry) (string, string, bool) {
+func defaultMountForPath(path string, engines []vault.MountEntry) (mount, subPath string, kvV2 bool) {
 	var singleKVMount string
 	var singleKVVersion string
 	kvCount := 0
