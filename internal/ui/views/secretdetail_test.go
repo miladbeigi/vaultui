@@ -173,10 +173,46 @@ func TestSecretDetailView_KeyHints(t *testing.T) {
 	for _, h := range hints {
 		hintMap[h.Key] = true
 	}
-	for _, expected := range []string{"c", "C"} {
+	for _, expected := range []string{"c", "C", "r"} {
 		if !hintMap[expected] {
 			t.Errorf("expected hint for key %q", expected)
 		}
+	}
+}
+
+func TestSecretDetailView_Refresh(t *testing.T) {
+	v := NewSecretDetailView(newTestClient(t), "secret/", "apps/config", true)
+	v.loading = false
+	v.secret = testSecretData()
+
+	updated, cmd := v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	sv := updated.(*SecretDetailView)
+
+	if !sv.loading {
+		t.Error("expected loading to be true after refresh")
+	}
+	if cmd == nil {
+		t.Error("expected a command from refresh")
+	}
+}
+
+func TestSecretDetailView_Refresh_InRawMode(t *testing.T) {
+	v := NewSecretDetailView(newTestClient(t), "secret/", "apps/config", true)
+	v.loading = false
+	v.secret = testSecretData()
+	v.rawMode = true
+
+	updated, cmd := v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	sv := updated.(*SecretDetailView)
+
+	if sv.rawMode {
+		t.Error("expected rawMode to be false after refresh")
+	}
+	if !sv.loading {
+		t.Error("expected loading to be true after refresh")
+	}
+	if cmd == nil {
+		t.Error("expected a command from refresh")
 	}
 }
 

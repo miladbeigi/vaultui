@@ -227,4 +227,28 @@ func TestPathBrowserView_KeyHints(t *testing.T) {
 	if len(hints) == 0 {
 		t.Error("expected key hints to be non-empty")
 	}
+	found := false
+	for _, h := range hints {
+		if h.Key == "r" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected refresh hint")
+	}
+}
+
+func TestPathBrowserView_Refresh(t *testing.T) {
+	v := NewPathBrowserView(newTestClient(t), "secret/", "", true)
+	v.loading = false
+
+	updated, cmd := v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}})
+	pv := updated.(*PathBrowserView)
+
+	if !pv.loading {
+		t.Error("expected loading to be true after refresh")
+	}
+	if cmd == nil {
+		t.Error("expected a command from refresh")
+	}
 }

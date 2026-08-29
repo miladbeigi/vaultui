@@ -130,6 +130,10 @@ func (v *SecretDetailView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 				v.toggleRaw(components.FormatJSON)
 			case "y":
 				v.toggleRaw(components.FormatYAML)
+			case "r":
+				v.rawMode = false
+				v.loading = true
+				return v, v.fetchSecret
 			case "esc":
 				v.rawMode = false
 				return v, nil
@@ -165,6 +169,9 @@ func (v *SecretDetailView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 				next := NewVersionsView(v.client, v.mount, v.path)
 				return v, func() tea.Msg { return ui.PushViewMsg{View: next} }
 			}
+		case msg.String() == "r":
+			v.loading = true
+			return v, v.fetchSecret
 		}
 	}
 
@@ -282,6 +289,7 @@ func (v *SecretDetailView) KeyHints() []ui.KeyHint {
 			{Key: "↑↓", Desc: "scroll"},
 			{Key: "c", Desc: "copy"},
 			{Key: "J/y", Desc: "json/yaml"},
+			{Key: "r", Desc: "refresh"},
 			{Key: "esc", Desc: "table view"},
 		}
 	}
@@ -289,6 +297,7 @@ func (v *SecretDetailView) KeyHints() []ui.KeyHint {
 		{Key: "↑↓", Desc: "navigate"},
 		{Key: "c", Desc: "copy value"},
 		{Key: "C", Desc: "copy JSON"},
+		{Key: "r", Desc: "refresh"},
 		{Key: "J/y", Desc: "json/yaml"},
 	}
 	if v.kvV2 {
