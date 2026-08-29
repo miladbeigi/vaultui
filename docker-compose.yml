@@ -11,7 +11,7 @@ services:
       - /var/lib/postgresql/data
 
   localstack:
-    image: localstack/localstack:3
+    image: localstack/localstack:4
     environment:
       SERVICES: iam,sts
       EAGER_SERVICE_LOADING: 1
