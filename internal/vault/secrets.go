@@ -171,10 +171,10 @@ func (c *Client) ReadSecretVersion(mount, subPath string, version int) (*SecretD
 
 // SecretData holds the key-value pairs for a single secret.
 type SecretData struct {
-	Data          map[string]string
-	Keys          []string
-	Deleted       bool
-	DeletionTime  string
+	Data         map[string]string
+	Keys         []string
+	Deleted      bool
+	DeletionTime string
 }
 
 // ReadSecret reads a secret at the given path.

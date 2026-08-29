@@ -305,10 +305,3 @@ func TestSecretDetailView_DeletedSecret_NoCopy(t *testing.T) {
 		t.Error("expected no command for copy JSON on deleted secret")
 	}
 }
-
-func testDeletedSecretData() *vault.SecretData {
-	return &vault.SecretData{
-		Deleted:      true,
-		DeletionTime: "2026-08-29T19:52:04Z",
-	}
-}
