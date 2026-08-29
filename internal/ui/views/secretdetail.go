@@ -103,7 +103,7 @@ func (v *SecretDetailView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		return v, nil
 
 	case tea.KeyMsg:
-		if v.secret == nil {
+		if v.secret == nil || v.secret.Deleted {
 			return v, nil
 		}
 		if v.rawMode {
@@ -235,7 +235,19 @@ func (v *SecretDetailView) View(width, height int) string {
 		return lipgloss.JoinVertical(lipgloss.Left, breadcrumb, body)
 	}
 
-	if v.secret == nil || len(v.secret.Keys) == 0 {
+	if v.secret == nil {
+		body := lipgloss.Place(width, height-detailBreadcrumbHeight, lipgloss.Center, lipgloss.Center,
+			styles.SubtleStyle.Render("Empty — no data in this secret"))
+		return lipgloss.JoinVertical(lipgloss.Left, breadcrumb, body)
+	}
+
+	if v.secret.Deleted {
+		body := lipgloss.Place(width, height-detailBreadcrumbHeight, lipgloss.Center, lipgloss.Center,
+			styles.ErrorStyle.Render("This secret was deleted at "+v.secret.DeletionTime))
+		return lipgloss.JoinVertical(lipgloss.Left, breadcrumb, body)
+	}
+
+	if len(v.secret.Keys) == 0 {
 		body := lipgloss.Place(width, height-detailBreadcrumbHeight, lipgloss.Center, lipgloss.Center,
 			styles.SubtleStyle.Render("Empty — no data in this secret"))
 		return lipgloss.JoinVertical(lipgloss.Left, breadcrumb, body)

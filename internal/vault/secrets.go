@@ -142,6 +142,17 @@ func (c *Client) ReadSecretVersion(mount, subPath string, version int) (*SecretD
 	}
 
 	raw := secret.Data
+
+	// Check for soft-deleted KV v2 secrets
+	if metadata, ok := raw["metadata"].(map[string]interface{}); ok {
+		if deletionTime, ok := metadata["deletion_time"].(string); ok && deletionTime != "" {
+			return &SecretData{
+				Deleted:      true,
+				DeletionTime: deletionTime,
+			}, nil
+		}
+	}
+
 	if inner, ok := raw["data"].(map[string]interface{}); ok {
 		raw = inner
 	}
@@ -160,8 +171,10 @@ func (c *Client) ReadSecretVersion(mount, subPath string, version int) (*SecretD
 
 // SecretData holds the key-value pairs for a single secret.
 type SecretData struct {
-	Data map[string]string
-	Keys []string
+	Data          map[string]string
+	Keys          []string
+	Deleted       bool
+	DeletionTime  string
 }
 
 // ReadSecret reads a secret at the given path.
@@ -183,7 +196,17 @@ func (c *Client) ReadSecret(mount, subPath string, kvV2 bool) (*SecretData, erro
 	}
 
 	raw := secret.Data
+
+	// Check for soft-deleted KV v2 secrets
 	if kvV2 {
+		if metadata, ok := raw["metadata"].(map[string]interface{}); ok {
+			if deletionTime, ok := metadata["deletion_time"].(string); ok && deletionTime != "" {
+				return &SecretData{
+					Deleted:      true,
+					DeletionTime: deletionTime,
+				}, nil
+			}
+		}
 		if inner, ok := raw["data"].(map[string]interface{}); ok {
 			raw = inner
 		}

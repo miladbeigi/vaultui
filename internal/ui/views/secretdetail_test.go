@@ -269,3 +269,46 @@ func TestSecretDetailView_NoKeyHandling_BeforeLoad(t *testing.T) {
 		t.Error("expected no command when no secret loaded")
 	}
 }
+
+func TestSecretDetailView_DeletedSecret(t *testing.T) {
+	v := NewSecretDetailView(newTestClient(t), "secret/", "apps/config", true)
+	v.loading = false
+	v.secret = &vault.SecretData{
+		Deleted:      true,
+		DeletionTime: "2026-08-29T19:52:04Z",
+	}
+
+	view := v.View(80, 20)
+	if !strings.Contains(view, "deleted") {
+		t.Error("expected deleted message in view")
+	}
+	if !strings.Contains(view, "2026-08-29T19:52:04Z") {
+		t.Error("expected deletion time in view")
+	}
+}
+
+func TestSecretDetailView_DeletedSecret_NoCopy(t *testing.T) {
+	v := NewSecretDetailView(newTestClient(t), "secret/", "apps/config", true)
+	v.loading = false
+	v.secret = &vault.SecretData{
+		Deleted:      true,
+		DeletionTime: "2026-08-29T19:52:04Z",
+	}
+
+	_, cmd := v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}})
+	if cmd != nil {
+		t.Error("expected no command for copy on deleted secret")
+	}
+
+	_, cmd = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'C'}})
+	if cmd != nil {
+		t.Error("expected no command for copy JSON on deleted secret")
+	}
+}
+
+func testDeletedSecretData() *vault.SecretData {
+	return &vault.SecretData{
+		Deleted:      true,
+		DeletionTime: "2026-08-29T19:52:04Z",
+	}
+}
