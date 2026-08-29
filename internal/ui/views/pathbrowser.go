@@ -88,6 +88,14 @@ func (v *PathBrowserView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		case msg.String() == "y":
 			cmd := v.handleRawOpen(components.FormatYAML)
 			return v, cmd
+		case msg.String() == "r":
+			v.loading = true
+			listPath := v.mount + v.path
+			if v.kvV2 {
+				listPath = v.mount + "metadata/" + v.path
+			}
+			v.client.InvalidateCache("list:" + listPath)
+			return v, v.fetchEntries
 		}
 	}
 
@@ -166,6 +174,7 @@ func (v *PathBrowserView) KeyHints() []ui.KeyHint {
 	return []ui.KeyHint{
 		{Key: "↑↓", Desc: "navigate"},
 		{Key: "⏎", Desc: "open"},
+		{Key: "r", Desc: "refresh"},
 		{Key: "J/y", Desc: "raw view"},
 		{Key: "esc", Desc: "back"},
 		{Key: "q", Desc: "quit"},
