@@ -13,6 +13,6 @@ RUN CGO_ENABLED=0 go build \
       -X github.com/miladbeigi/vaultui/internal/version.Date=${DATE}" \
     -o /vaultui .
 
-FROM alpine:3.21
+FROM alpine:3.24
 COPY --from=build /vaultui /usr/local/bin/vaultui
 ENTRYPOINT ["vaultui"]
