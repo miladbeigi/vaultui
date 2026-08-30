@@ -13,7 +13,7 @@ var (
 	Date    = "unknown"
 )
 
-const contentWidth = 40
+const contentWidth = 52
 
 var (
 	top = "╔" + strings.Repeat("═", contentWidth) + "╗"
@@ -60,6 +60,6 @@ func Banner() string {
 }
 
 func String() string {
-	return fmt.Sprintf("vaultui %s (%s, commit: %s, built: %s, %s/%s)\n\n%s",
+	return fmt.Sprintf("vaultui %s (commit %s, built %s, %s/%s)\n\n%s",
 		Version, Commit, Date, runtime.GOOS, runtime.GOARCH, Banner())
 }
