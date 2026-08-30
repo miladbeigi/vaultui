@@ -5,8 +5,9 @@ LDFLAGS  = -s -w \
            -X github.com/miladbeigi/vaultui/internal/version.Version=$(VERSION) \
            -X github.com/miladbeigi/vaultui/internal/version.Commit=$(COMMIT) \
            -X github.com/miladbeigi/vaultui/internal/version.Date=$(DATE)
+GOLANGCI_LINT_VERSION ?= v2.13.1
 
-.PHONY: ci fmt vet lint test build tidy clean release
+.PHONY: ci fmt vet lint lint-install test build tidy clean release
 
 ci:
 	@if $(MAKE) --no-print-directory fmt vet lint test build tidy; then \
@@ -24,9 +25,13 @@ vet:
 	@echo "==> Running go vet..."
 	go vet ./...
 
+lint-install:
+	@echo "==> Installing golangci-lint $(GOLANGCI_LINT_VERSION)..."
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+
 lint:
 	@echo "==> Running golangci-lint..."
-	@which golangci-lint > /dev/null 2>&1 || (echo "Install: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest" && exit 1)
+	@which golangci-lint > /dev/null 2>&1 || (echo "golangci-lint not installed. Run: make lint-install" && exit 1)
 	golangci-lint run
 
 test:
