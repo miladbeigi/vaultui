@@ -19,7 +19,7 @@ services:
       - "4566:4566"
 
   vault:
-    image: hashicorp/vault:1.15
+    image: hashicorp/vault:1.21
     container_name: vaultui-dev
     ports:
       - "8200:8200"
@@ -33,7 +33,7 @@ services:
       - /vault/data
 
   seed:
-    image: hashicorp/vault:1.15
+    image: hashicorp/vault:1.21
     depends_on:
       - vault
       - postgres
