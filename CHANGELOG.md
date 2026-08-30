@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-30
+
+### Added
+
+- Refresh key (`r`) for PathBrowserView and SecretDetailView to re-fetch data and invalidate cache
+- Deleted-secret detection in SecretDetailView showing deletion time for soft-deleted KV v2 secrets
+- Disable copy operations on deleted secrets
+
+### Changed
+
+- Pinned `golangci-lint` to `v2.13.1` in CI and Makefile for reproducible builds
+- Updated Go to v1.27
+- Updated Renovate config and dependency updates (Docker base images, GitHub Actions)
+
+## [0.7.0] - 2026-06-14
+
 ### Added
 
 - Help overlay (`?`) showing global keybindings and current view shortcuts
