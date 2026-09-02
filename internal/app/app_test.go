@@ -254,10 +254,15 @@ func TestDefaultPath_BackNavigatesAboveDefaultPath(t *testing.T) {
 	})
 	model := updated.(Model)
 
+	startTitle := "secret/services/infrastructure-storage/dev/"
+	if model.router.Current().Title() != startTitle {
+		t.Fatalf("expected title %q before back, got %q", startTitle, model.router.Current().Title())
+	}
+
 	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	model = updated.(Model)
 
-	wantTitle := "secret/services/infrastructure-storage/dev/"
+	wantTitle := "secret/services/infrastructure-storage/"
 	if model.router.Current().Title() != wantTitle {
 		t.Errorf("expected title %q after back, got %q", wantTitle, model.router.Current().Title())
 	}
