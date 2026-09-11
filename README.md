@@ -182,9 +182,11 @@ contexts:
   - name: dev
     address: http://127.0.0.1:8200
     token: root
+    default_path: services/infrastructure-storage/dev
 
   - name: staging
     address: https://vault.staging.example.com
+    default_path: secret/apps/
     auth:
       method: userpass
       username: admin
