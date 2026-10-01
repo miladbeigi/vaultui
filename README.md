@@ -8,6 +8,8 @@
 A **k9s-inspired terminal UI** for [HashiCorp Vault](https://www.vaultproject.io/).
 Browse secrets, auth methods, policies, and more — without leaving your terminal.
 
+**Website:** [vaultui.miladapps.com](https://vaultui.miladapps.com), with a playable replay of the TUI.
+
 <p align="center">
   <img src="docs/images/dashboard.png" alt="VaultUI Dashboard" width="800">
 </p>
@@ -43,16 +45,14 @@ Browse secrets, auth methods, policies, and more — without leaving your termin
 
 Download a pre-built binary from the [latest release](https://github.com/miladbeigi/vaultui/releases/latest):
 
-```bash
-# macOS (Apple Silicon)
-curl -Lo vaultui.tar.gz https://github.com/miladbeigi/vaultui/releases/latest/download/vaultui_*_darwin_arm64.tar.gz
-tar xzf vaultui.tar.gz
-sudo mv vaultui /usr/local/bin/
+macOS and Linux, amd64 and arm64:
 
-# Linux (amd64)
-curl -Lo vaultui.tar.gz https://github.com/miladbeigi/vaultui/releases/latest/download/vaultui_*_linux_amd64.tar.gz
-tar xzf vaultui.tar.gz
-sudo mv vaultui /usr/local/bin/
+```bash
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')
+VERSION=$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/miladbeigi/vaultui/releases/latest | sed 's|.*/v||')
+curl -fsSL "https://github.com/miladbeigi/vaultui/releases/download/v${VERSION}/vaultui_${VERSION}_${OS}_${ARCH}.tar.gz" | tar -xz vaultui
+sudo install vaultui /usr/local/bin/
 ```
 
 ### Docker
