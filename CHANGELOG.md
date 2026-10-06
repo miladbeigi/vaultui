@@ -7,9 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-06
+
+### Added
+
+- k9s-style version banner
+
 ### Changed
 
 - Migrate `bubbles/key` to Bubbles v2 (`charm.land/bubbles/v2/key`); Bubble Tea and Lip Gloss stay on v1
+- Bumped Go directive to 1.27.1
+- Dependency updates (postgres Docker tag, GitHub Actions)
+
+### Docs
+
+- Added AGENTS.md with build/CI workflow guidelines
+- Linked the website and fixed the binary install command
 
 ## [0.8.0] - 2026-08-30
 
