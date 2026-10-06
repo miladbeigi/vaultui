@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/charmbracelet/bubbles/key"
+	"charm.land/bubbles/v2/key"
 
 	"github.com/miladbeigi/vaultui/internal/ui"
 	"github.com/miladbeigi/vaultui/internal/ui/components"
