@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Migrate `bubbles/key` to Bubbles v2 (`charm.land/bubbles/v2/key`); Bubble Tea and Lip Gloss stay on v1
+
 ## [0.8.0] - 2026-08-30
 
 ### Added
