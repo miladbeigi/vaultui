@@ -29,6 +29,7 @@ contexts:
     address: http://localhost:8200
     token: dev-token
     namespace: dev-ns
+    default_path: secret/apps/
   - name: prod
     address: https://vault.example.com
     auth:
@@ -54,6 +55,9 @@ settings:
 	}
 	if cfg.Contexts[0].Address != "http://localhost:8200" {
 		t.Errorf("unexpected address: %s", cfg.Contexts[0].Address)
+	}
+	if cfg.Contexts[0].DefaultPath != "secret/apps/" {
+		t.Errorf("unexpected default_path: %s", cfg.Contexts[0].DefaultPath)
 	}
 	if cfg.Contexts[1].Auth.Method != "userpass" {
 		t.Errorf("unexpected auth method: %s", cfg.Contexts[1].Auth.Method)
