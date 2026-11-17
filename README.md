@@ -18,7 +18,8 @@ Browse secrets, auth methods, policies, and more — without leaving your termin
 
 - **Dashboard** — seal status, version, HA node count, storage backend, resource counts, quick nav
 - **Secret Engines browser** — list all KV, PKI, Transit, Identity, and other mounts
-- **KV v2 path browser** — drill into directories, read secrets, copy values to clipboard
+- **KV v2 path browser** — drill into directories, read secrets, copy values to clipboard, refresh with `r`
+- **Deleted-secret detection** — soft-deleted KV v2 secrets show their deletion time, with copy disabled
 - **KV v2 version history** — browse version history, view specific versions, diff between versions
 - **Policies browser** — list and view ACL policy bodies with syntax highlighting
 - **Auth Methods browser** — list all enabled auth methods with type, accessor, description
@@ -32,6 +33,8 @@ Browse secrets, auth methods, policies, and more — without leaving your termin
 - **Clipboard with auto-clear** — copied secrets are cleared after 30 seconds
 - **Headless mode** — `vaultui get` subcommand for JSON output in scripts
 - **Vim-style navigation** — `j`/`k`, `g`/`G`, `Ctrl+D`/`Ctrl+U`, `Enter`, `Esc`
+- **Help overlay** — press `?` for global keybindings plus the current view's shortcuts
+- **Version banner** — `vaultui version` prints a k9s-style banner with version, commit, and build date
 
 ## Demo
 
@@ -95,6 +98,9 @@ vaultui --auth-method userpass --username admin --password secret
 
 # With AppRole auth
 vaultui --auth-method approle --role-id xxx --secret-id yyy
+
+# Print the version banner
+vaultui version
 ```
 
 ### Local Dev Environment
@@ -139,11 +145,15 @@ vaultui get secret secret/apps/myapp/config | jq .db_host
 | `4`          | Identity                        |
 | `5`          | PKI                             |
 | `6`          | Transit                         |
+| `7`          | Database                        |
+| `8`          | AWS                             |
 | `Tab`        | Switch tab (where applicable)   |
 | `:`          | Command palette                 |
 | `?`          | Show help overlay               |
 | `c`          | Copy selected value             |
 | `C`          | Copy secret as JSON             |
+| `J` / `y`    | Raw JSON / YAML (detail views)  |
+| `r`          | Refresh (path browser, secret)  |
 | `v`          | Version history (KV v2 detail)  |
 | `d`          | Diff versions (version history) |
 | `q`          | Quit                            |
@@ -160,6 +170,8 @@ Press `:` to open, then type a command:
 | `:identity`    | Go to Identity       |
 | `:pki`         | Go to PKI engine     |
 | `:transit`     | Go to Transit engine |
+| `:db`          | Go to Database engine |
+| `:aws`         | Go to AWS engine     |
 | `:ctx`         | Switch Vault context |
 | `:dash`        | Go to Dashboard      |
 | `:q` / `:quit` | Quit                 |
