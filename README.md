@@ -8,7 +8,7 @@
 A **k9s-inspired terminal UI** for [HashiCorp Vault](https://www.vaultproject.io/).
 Browse secrets, auth methods, policies, and more — without leaving your terminal.
 
-**Website:** [vaultui.miladapps.com](https://vaultui.miladapps.com), with a playable replay of the TUI.
+**Website:** [milad.cloud/vaultui](https://milad.cloud/vaultui/), with a playable replay of the TUI.
 
 <p align="center">
   <img src="docs/images/dashboard.png" alt="VaultUI Dashboard" width="800">
