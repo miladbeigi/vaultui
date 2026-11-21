@@ -10,11 +10,12 @@ import (
 
 // Context represents a named Vault connection configuration.
 type Context struct {
-	Name      string `yaml:"name"`
-	Address   string `yaml:"address"`
-	Token     string `yaml:"token,omitempty"`
-	Namespace string `yaml:"namespace,omitempty"`
-	Auth      Auth   `yaml:"auth,omitempty"`
+	Name        string `yaml:"name"`
+	Address     string `yaml:"address"`
+	Token       string `yaml:"token,omitempty"`
+	Namespace   string `yaml:"namespace,omitempty"`
+	DefaultPath string `yaml:"default_path,omitempty"`
+	Auth        Auth   `yaml:"auth,omitempty"`
 }
 
 // Auth holds authentication-specific configuration for a context.

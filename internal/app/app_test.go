@@ -2,14 +2,44 @@ package app
 
 import (
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/miladbeigi/vaultui/internal/config"
+	"github.com/miladbeigi/vaultui/internal/ui"
 	"github.com/miladbeigi/vaultui/internal/ui/views"
 	"github.com/miladbeigi/vaultui/internal/vault"
 )
+
+type initCountingView struct {
+	title string
+	inits *int
+}
+
+func (v initCountingView) Init() tea.Cmd {
+	(*v.inits)++
+	return nil
+}
+
+func (v initCountingView) Update(tea.Msg) (ui.View, tea.Cmd) {
+	return v, nil
+}
+
+func (v initCountingView) View(int, int) string {
+	return ""
+}
+
+func (v initCountingView) Title() string {
+	return v.title
+}
+
+func (v initCountingView) KeyHints() []ui.KeyHint {
+	return nil
+}
 
 func newTestClient(t *testing.T) *vault.Client {
 	t.Helper()
@@ -25,6 +55,34 @@ func newTestClient(t *testing.T) *vault.Client {
 		t.Fatalf("failed to create test client: %v", err)
 	}
 	return c
+}
+
+func newTestClientWithHandler(t *testing.T, handler http.Handler) *vault.Client {
+	t.Helper()
+	t.Setenv("VAULT_ADDR", "")
+	t.Setenv("VAULT_TOKEN", "")
+	t.Setenv("HOME", t.TempDir())
+
+	server := httptest.NewServer(handler)
+	t.Cleanup(server.Close)
+
+	c, err := vault.NewClient(vault.ClientConfig{
+		Address: server.URL,
+		Token:   "test-token",
+	})
+	if err != nil {
+		t.Fatalf("failed to create test client: %v", err)
+	}
+	return c
+}
+
+func configWithDefaultPath(path string) *config.Config {
+	return &config.Config{
+		CurrentContext: "dev",
+		Contexts: []config.Context{
+			{Name: "dev", Address: "http://127.0.0.1:8200", DefaultPath: path},
+		},
+	}
 }
 
 func TestNew(t *testing.T) {
@@ -55,6 +113,180 @@ func TestInit_ReturnsCmd(t *testing.T) {
 	cmd := m.Init()
 	if cmd == nil {
 		t.Error("expected Init to return a command for health check")
+	}
+}
+
+func TestNew_StoresDefaultPath(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, configWithDefaultPath(" secret/apps/ "), "")
+
+	if m.defaultPath != "secret/apps/" {
+		t.Errorf("expected trimmed default path, got %q", m.defaultPath)
+	}
+}
+
+func TestNew_UsesCurrentContextDefaultPath(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, &config.Config{
+		CurrentContext: "prod",
+		Contexts: []config.Context{
+			{Name: "dev", Address: "http://127.0.0.1:8200", DefaultPath: "dev/path"},
+			{Name: "prod", Address: "http://127.0.0.1:8200", DefaultPath: "prod/path"},
+		},
+	}, "")
+
+	if m.defaultPath != "prod/path" {
+		t.Errorf("expected current context default path, got %q", m.defaultPath)
+	}
+}
+
+func TestSwitchContext_UsesContextDefaultPath(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, configWithDefaultPath("dev/path"), "")
+
+	updated, _ := m.Update(views.SwitchContextMsg{
+		Context: config.Context{
+			Name:        "prod",
+			Address:     "http://127.0.0.1:8200",
+			DefaultPath: " prod/path ",
+		},
+	})
+	model := updated.(Model)
+
+	if model.defaultPath != "prod/path" {
+		t.Errorf("expected switched context default path, got %q", model.defaultPath)
+	}
+}
+
+func TestDefaultPath_NavigatesToPathBrowser(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, configWithDefaultPath("secret/apps/"), "")
+
+	updated, cmd := m.Update(defaultPathMsg{
+		path: "secret/apps/",
+		engines: []vault.MountEntry{
+			{Path: "secret/", Type: "kv", Version: "v2"},
+		},
+	})
+	model := updated.(Model)
+
+	if cmd == nil {
+		t.Error("expected default path navigation to initialize the target view")
+	}
+	if model.router.Depth() != 3 {
+		t.Errorf("expected router depth 3 after default path navigation, got %d", model.router.Depth())
+	}
+	if _, ok := model.router.Current().(*views.PathBrowserView); !ok {
+		t.Errorf("expected current view to be PathBrowserView, got %T", model.router.Current())
+	}
+}
+
+func TestDefaultPath_NavigatesRelativeToSecretMount(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, configWithDefaultPath("services/"), "")
+
+	updated, cmd := m.Update(defaultPathMsg{
+		path: "services/",
+		engines: []vault.MountEntry{
+			{Path: "secret/", Type: "kv", Version: "v2"},
+			{Path: "aws/", Type: "aws"},
+		},
+	})
+	model := updated.(Model)
+
+	if cmd == nil {
+		t.Error("expected default path navigation to initialize the target view")
+	}
+	if _, ok := model.router.Current().(*views.PathBrowserView); !ok {
+		t.Errorf("expected current view to be PathBrowserView, got %T", model.router.Current())
+	}
+}
+
+func TestDefaultPath_NavigatesToDirectoryWithoutTrailingSlash(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		wantPath := "/v1/secret/metadata/services/infrastructure-storage/dev"
+		if r.Method != http.MethodGet ||
+			strings.TrimSuffix(r.URL.Path, "/") != wantPath ||
+			r.URL.Query().Get("list") != "true" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"keys":["secrets"]}}`))
+	})
+	client := newTestClientWithHandler(t, handler)
+	m := New(client, configWithDefaultPath("services/infrastructure-storage/dev"), "")
+
+	updated, cmd := m.Update(defaultPathMsg{
+		path: "services/infrastructure-storage/dev",
+		engines: []vault.MountEntry{
+			{Path: "secret/", Type: "kv", Version: "v2"},
+		},
+	})
+	model := updated.(Model)
+
+	if cmd == nil {
+		t.Error("expected default path navigation to initialize the target view")
+	}
+	current, ok := model.router.Current().(*views.PathBrowserView)
+	if !ok {
+		t.Fatalf("expected current view to be PathBrowserView, got %T", model.router.Current())
+	}
+	wantTitle := "secret/services/infrastructure-storage/dev/"
+	if current.Title() != wantTitle {
+		t.Errorf("expected title %q, got %q", wantTitle, current.Title())
+	}
+}
+
+func TestDefaultPath_BackNavigatesAboveDefaultPath(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"keys":["child/"]}}`))
+	})
+	client := newTestClientWithHandler(t, handler)
+	m := New(client, configWithDefaultPath("services/infrastructure-storage/dev"), "")
+
+	updated, _ := m.Update(defaultPathMsg{
+		path: "services/infrastructure-storage/dev",
+		engines: []vault.MountEntry{
+			{Path: "secret/", Type: "kv", Version: "v2"},
+		},
+	})
+	model := updated.(Model)
+
+	startTitle := "secret/services/infrastructure-storage/dev/"
+	if model.router.Current().Title() != startTitle {
+		t.Fatalf("expected title %q before back, got %q", startTitle, model.router.Current().Title())
+	}
+
+	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	model = updated.(Model)
+
+	wantTitle := "secret/services/infrastructure-storage/"
+	if model.router.Current().Title() != wantTitle {
+		t.Errorf("expected title %q after back, got %q", wantTitle, model.router.Current().Title())
+	}
+}
+
+func TestResetToPathStack_InitializesOnlyCurrentView(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, nil, "")
+	parentInits := 0
+	currentInits := 0
+
+	cmd := m.resetToPathStack([]ui.View{
+		initCountingView{title: "parent", inits: &parentInits},
+		initCountingView{title: "current", inits: &currentInits},
+	})
+	if cmd != nil {
+		_ = cmd()
+	}
+
+	if parentInits != 0 {
+		t.Errorf("expected parent view to stay lazy, got %d init calls", parentInits)
+	}
+	if currentInits != 1 {
+		t.Errorf("expected current view to initialize once, got %d", currentInits)
 	}
 }
 
