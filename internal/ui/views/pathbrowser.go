@@ -18,17 +18,20 @@ type pathListMsg struct {
 
 // PathBrowserView browses directories and secrets within a secret engine.
 type PathBrowserView struct {
-	client  *vault.Client
-	mount   string
-	path    string
-	kvV2    bool
-	table   *components.Table
-	entries []vault.PathEntry
-	err     error
-	loading bool
+	client   *vault.Client
+	mount    string
+	path     string
+	kvV2     bool
+	table    *components.Table
+	entries  []vault.PathEntry
+	filtered []vault.PathEntry
+	filter   components.FilterBar
+	err      error
+	loading  bool
 }
 
 var _ ui.View = (*PathBrowserView)(nil)
+var _ ui.Filterable = (*PathBrowserView)(nil)
 
 var pathColumns = []components.Column{
 	{Title: "NAME", MinWidth: 30, FlexFill: true},
@@ -62,10 +65,16 @@ func (v *PathBrowserView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		v.loading = false
 		v.err = msg.err
 		v.entries = msg.entries
-		v.table.SetRows(v.buildRows())
+		v.applyFilter()
 		return v, nil
 
 	case tea.KeyMsg:
+		if v.filter.Active {
+			v.filter.Update(msg)
+			v.applyFilter()
+			return v, nil
+		}
+
 		switch {
 		case key.Matches(msg, navKeys.Up):
 			v.table.MoveUp()
@@ -82,6 +91,9 @@ func (v *PathBrowserView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		case key.Matches(msg, navKeys.Enter):
 			cmd := v.handleEnter()
 			return v, cmd
+		case msg.String() == "/":
+			v.filter.Active = true
+			return v, nil
 		case msg.String() == "J":
 			cmd := v.handleRawOpen(components.FormatJSON)
 			return v, cmd
@@ -137,29 +149,40 @@ func (v *PathBrowserView) handleEnter() tea.Cmd {
 const pathBreadcrumbHeight = 2 // breadcrumb + blank line
 
 func (v *PathBrowserView) View(width, height int) string {
-	v.table.SetSize(width, height-pathBreadcrumbHeight)
+	filterHeight := 0
+	parts := []string{v.renderBreadcrumb(width)}
+	if v.filter.Active || v.filter.Text != "" {
+		parts = append(parts, v.filter.View(width))
+		filterHeight = components.FilterBarHeight
+	}
 
-	breadcrumb := v.renderBreadcrumb(width)
+	v.table.SetSize(width, height-pathBreadcrumbHeight-filterHeight)
 
 	if v.loading {
-		body := lipgloss.Place(width, height-pathBreadcrumbHeight, lipgloss.Center, lipgloss.Center,
-			styles.SubtleStyle.Render("Loading..."))
-		return lipgloss.JoinVertical(lipgloss.Left, breadcrumb, body)
+		parts = append(parts, lipgloss.Place(width, height-pathBreadcrumbHeight-filterHeight, lipgloss.Center, lipgloss.Center,
+			styles.SubtleStyle.Render("Loading...")))
+		return lipgloss.JoinVertical(lipgloss.Left, parts...)
 	}
 
 	if v.err != nil {
-		body := lipgloss.Place(width, height-pathBreadcrumbHeight, lipgloss.Center, lipgloss.Center,
-			styles.ErrorStyle.Render("Error: "+v.err.Error()))
-		return lipgloss.JoinVertical(lipgloss.Left, breadcrumb, body)
+		parts = append(parts, lipgloss.Place(width, height-pathBreadcrumbHeight-filterHeight, lipgloss.Center, lipgloss.Center,
+			styles.ErrorStyle.Render("Error: "+v.err.Error())))
+		return lipgloss.JoinVertical(lipgloss.Left, parts...)
 	}
 
 	if len(v.entries) == 0 {
-		body := lipgloss.Place(width, height-pathBreadcrumbHeight, lipgloss.Center, lipgloss.Center,
-			styles.SubtleStyle.Render("Empty — no keys at this path"))
-		return lipgloss.JoinVertical(lipgloss.Left, breadcrumb, body)
+		parts = append(parts, lipgloss.Place(width, height-pathBreadcrumbHeight-filterHeight, lipgloss.Center, lipgloss.Center,
+			styles.SubtleStyle.Render("Empty — no keys at this path")))
+		return lipgloss.JoinVertical(lipgloss.Left, parts...)
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left, breadcrumb, v.table.View())
+	if len(v.filtered) == 0 {
+		parts = append(parts, lipgloss.Place(width, height-pathBreadcrumbHeight-filterHeight, lipgloss.Center, lipgloss.Center,
+			styles.SubtleStyle.Render("No matches for '"+v.filter.Text+"'")))
+		return lipgloss.JoinVertical(lipgloss.Left, parts...)
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, append(parts, v.table.View())...)
 }
 
 func (v *PathBrowserView) renderBreadcrumb(width int) string {
@@ -171,9 +194,16 @@ func (v *PathBrowserView) Title() string {
 }
 
 func (v *PathBrowserView) KeyHints() []ui.KeyHint {
+	if v.filter.Active {
+		return []ui.KeyHint{
+			{Key: "⏎", Desc: "apply filter"},
+			{Key: "esc", Desc: "clear filter"},
+		}
+	}
 	return []ui.KeyHint{
 		{Key: "↑↓", Desc: "navigate"},
 		{Key: "⏎", Desc: "open"},
+		{Key: "/", Desc: "filter"},
 		{Key: "r", Desc: "refresh"},
 		{Key: "J/y", Desc: "raw view"},
 		{Key: "esc", Desc: "back"},
@@ -181,17 +211,44 @@ func (v *PathBrowserView) KeyHints() []ui.KeyHint {
 	}
 }
 
+// FilterActive reports whether the filter input is capturing keys.
+func (v *PathBrowserView) FilterActive() bool {
+	return v.filter.Active
+}
+
+// HasFilter reports whether a filter is currently applied.
+func (v *PathBrowserView) HasFilter() bool {
+	return v.filter.Text != ""
+}
+
+// ClearFilter drops the applied filter and shows all entries.
+func (v *PathBrowserView) ClearFilter() {
+	v.filter.Text = ""
+	v.filter.Active = false
+	v.applyFilter()
+}
+
 func (v *PathBrowserView) selectedEntry() *vault.PathEntry {
 	idx := v.table.Cursor()
-	if idx < 0 || idx >= len(v.entries) {
+	if idx < 0 || idx >= len(v.filtered) {
 		return nil
 	}
-	return &v.entries[idx]
+	return &v.filtered[idx]
+}
+
+// applyFilter rebuilds the filtered entries and table rows, resetting
+// the cursor to the top.
+func (v *PathBrowserView) applyFilter() {
+	v.filtered = components.Filter(v.entries, v.filter.Text, func(e vault.PathEntry) string {
+		return e.Name
+	})
+	v.table.SetRows(v.buildRows())
+	v.table.GoToTop()
 }
 
 func (v *PathBrowserView) buildRows() []components.Row {
-	rows := make([]components.Row, len(v.entries))
-	for i, e := range v.entries {
+	rows := make([]components.Row, len(v.filtered))
+	for i, e := range v.filtered {
 		icon := "📄 "
 		kind := "secret"
 		if e.IsDir {

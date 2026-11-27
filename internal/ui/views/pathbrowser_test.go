@@ -84,7 +84,7 @@ func TestPathBrowserView_View_WithData(t *testing.T) {
 		{Name: "production/", IsDir: true},
 		{Name: "config", IsDir: false},
 	}
-	v.table.SetRows(v.buildRows())
+	v.applyFilter()
 
 	view := v.View(80, 20)
 	if !strings.Contains(view, "production/") {
@@ -148,7 +148,7 @@ func TestPathBrowserView_Navigation(t *testing.T) {
 		{Name: "infra/", IsDir: true},
 		{Name: "config", IsDir: false},
 	}
-	v.table.SetRows(v.buildRows())
+	v.applyFilter()
 
 	v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	if v.table.Cursor() != 1 {
@@ -168,7 +168,7 @@ func TestPathBrowserView_Enter_Directory(t *testing.T) {
 		{Name: "apps/", IsDir: true},
 		{Name: "config", IsDir: false},
 	}
-	v.table.SetRows(v.buildRows())
+	v.applyFilter()
 
 	_, cmd := v.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if cmd == nil {
@@ -199,7 +199,7 @@ func TestPathBrowserView_Enter_LeafSecret(t *testing.T) {
 	v.entries = []vault.PathEntry{
 		{Name: "config", IsDir: false},
 	}
-	v.table.SetRows(v.buildRows())
+	v.applyFilter()
 
 	_, cmd := v.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if cmd == nil {
@@ -250,5 +250,157 @@ func TestPathBrowserView_Refresh(t *testing.T) {
 	}
 	if cmd == nil {
 		t.Error("expected a command from refresh")
+	}
+}
+
+func runeKey(s string) tea.KeyMsg {
+	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)}
+}
+
+func TestPathBrowserView_Filter_NarrowsRows(t *testing.T) {
+	v := NewPathBrowserView(newTestClient(t), "secret/", "", true)
+	v.Update(pathListMsg{entries: []vault.PathEntry{
+		{Name: "apps/", IsDir: true},
+		{Name: "bank/", IsDir: true},
+		{Name: "config", IsDir: false},
+	}})
+
+	updated, _ := v.Update(runeKey("/"))
+	pv := updated.(*PathBrowserView)
+	if !pv.filter.Active {
+		t.Error("expected '/' to activate the filter input")
+	}
+
+	updated, _ = pv.Update(runeKey("bnk"))
+	pv = updated.(*PathBrowserView)
+
+	if len(pv.filtered) != 1 || pv.filtered[0].Name != "bank/" {
+		t.Fatalf("expected filtered [bank/], got %v", pv.filtered)
+	}
+	if pv.table.RowCount() != 1 {
+		t.Errorf("expected 1 table row, got %d", pv.table.RowCount())
+	}
+	if sel := pv.selectedEntry(); sel == nil || sel.Name != "bank/" {
+		t.Error("expected selected entry to come from the filtered set")
+	}
+}
+
+func TestPathBrowserView_Filter_CommitKeepsFilter(t *testing.T) {
+	v := NewPathBrowserView(newTestClient(t), "secret/", "", true)
+	v.Update(pathListMsg{entries: []vault.PathEntry{
+		{Name: "apps/", IsDir: true},
+		{Name: "bank/", IsDir: true},
+	}})
+	v.Update(runeKey("/"))
+	v.Update(runeKey("ban"))
+
+	updated, _ := v.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	pv := updated.(*PathBrowserView)
+
+	if pv.filter.Active {
+		t.Error("expected Enter to close the filter input")
+	}
+	if !pv.HasFilter() {
+		t.Error("expected the filter to stay applied after Enter")
+	}
+	if len(pv.filtered) != 1 {
+		t.Errorf("expected 1 filtered entry, got %d", len(pv.filtered))
+	}
+}
+
+func TestPathBrowserView_Filter_EscWhileTypingClears(t *testing.T) {
+	v := NewPathBrowserView(newTestClient(t), "secret/", "", true)
+	v.Update(pathListMsg{entries: []vault.PathEntry{
+		{Name: "apps/", IsDir: true},
+		{Name: "bank/", IsDir: true},
+	}})
+	v.Update(runeKey("/"))
+	v.Update(runeKey("ban"))
+
+	updated, _ := v.Update(tea.KeyMsg{Type: tea.KeyEsc})
+	pv := updated.(*PathBrowserView)
+
+	if pv.filter.Active {
+		t.Error("expected Esc to close the filter input")
+	}
+	if pv.HasFilter() {
+		t.Error("expected Esc to clear the filter")
+	}
+	if len(pv.filtered) != 2 {
+		t.Errorf("expected all entries after clearing, got %d", len(pv.filtered))
+	}
+}
+
+func TestPathBrowserView_ClearFilter(t *testing.T) {
+	v := NewPathBrowserView(newTestClient(t), "secret/", "", true)
+	v.Update(pathListMsg{entries: []vault.PathEntry{
+		{Name: "apps/", IsDir: true},
+		{Name: "bank/", IsDir: true},
+	}})
+	v.Update(runeKey("/"))
+	v.Update(runeKey("ban"))
+	v.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	v.ClearFilter()
+
+	if v.HasFilter() || v.FilterActive() {
+		t.Error("expected ClearFilter to drop the filter")
+	}
+	if len(v.filtered) != 2 {
+		t.Errorf("expected all entries after ClearFilter, got %d", len(v.filtered))
+	}
+}
+
+func TestPathBrowserView_Filter_NoMatches(t *testing.T) {
+	v := NewPathBrowserView(newTestClient(t), "secret/", "", true)
+	v.Update(pathListMsg{entries: []vault.PathEntry{
+		{Name: "apps/", IsDir: true},
+		{Name: "bank/", IsDir: true},
+	}})
+	v.Update(runeKey("/"))
+	v.Update(runeKey("zzz"))
+
+	view := v.View(80, 20)
+	if !strings.Contains(view, "No matches") {
+		t.Error("expected no-matches message")
+	}
+	if !strings.Contains(view, "zzz") {
+		t.Error("expected the filter input to render its text")
+	}
+}
+
+func TestPathBrowserView_Filter_SurvivesReload(t *testing.T) {
+	v := NewPathBrowserView(newTestClient(t), "secret/", "", true)
+	v.Update(pathListMsg{entries: []vault.PathEntry{
+		{Name: "apps/", IsDir: true},
+		{Name: "bank/", IsDir: true},
+	}})
+	v.Update(runeKey("/"))
+	v.Update(runeKey("ban"))
+	v.Update(tea.KeyMsg{Type: tea.KeyEnter})
+
+	updated, _ := v.Update(pathListMsg{entries: []vault.PathEntry{
+		{Name: "apps/", IsDir: true},
+		{Name: "bank/", IsDir: true},
+		{Name: "infra/", IsDir: true},
+	}})
+	pv := updated.(*PathBrowserView)
+
+	if len(pv.filtered) != 1 || pv.filtered[0].Name != "bank/" {
+		t.Errorf("expected filter to survive reload, got %v", pv.filtered)
+	}
+}
+
+func TestPathBrowserView_KeyHints_IncludeFilter(t *testing.T) {
+	v := NewPathBrowserView(newTestClient(t), "secret/", "", true)
+
+	found := false
+	for _, h := range v.KeyHints() {
+		if h.Key == "/" && h.Desc == "filter" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected '/' filter hint")
 	}
 }

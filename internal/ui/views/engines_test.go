@@ -91,7 +91,7 @@ func TestEnginesView_View_WithData(t *testing.T) {
 	v.engines = []vault.MountEntry{
 		{Path: "secret/", Type: "kv", Version: "v2", Description: "Key/Value store"},
 	}
-	v.table.SetRows(v.buildRows())
+	v.applyFilter()
 
 	view := v.View(80, 20)
 	if !strings.Contains(view, "secret/") {
@@ -132,7 +132,7 @@ func TestEnginesView_Navigation(t *testing.T) {
 		{Path: "pki/", Type: "pki"},
 		{Path: "transit/", Type: "transit"},
 	}
-	v.table.SetRows(v.buildRows())
+	v.applyFilter()
 
 	v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	if v.table.Cursor() != 1 {
@@ -167,7 +167,7 @@ func TestEnginesView_SelectedEngine(t *testing.T) {
 		{Path: "secret/", Type: "kv"},
 		{Path: "pki/", Type: "pki"},
 	}
-	v.table.SetRows(v.buildRows())
+	v.applyFilter()
 
 	sel := v.SelectedEngine()
 	if sel == nil || sel.Path != "secret/" {
@@ -190,3 +190,99 @@ func TestEnginesView_KeyHints(t *testing.T) {
 }
 
 var errTest = fmt.Errorf("test error")
+
+func TestEnginesView_Filter_NarrowsRows(t *testing.T) {
+	v := NewEnginesView(newTestClient(t))
+	v.Update(enginesLoadedMsg{engines: []vault.MountEntry{
+		{Path: "secret/", Type: "kv", Version: "v2", Description: "Key/Value store"},
+		{Path: "pki/", Type: "pki", Description: "PKI certificates"},
+		{Path: "transit/", Type: "transit", Description: "Transit encryption keys"},
+	}})
+
+	updated, _ := v.Update(runeKey("/"))
+	ev := updated.(*EnginesView)
+	if !ev.filter.Active {
+		t.Error("expected '/' to activate the filter input")
+	}
+
+	updated, _ = ev.Update(runeKey("pk"))
+	ev = updated.(*EnginesView)
+
+	if len(ev.filtered) != 1 || ev.filtered[0].Path != "pki/" {
+		t.Fatalf("expected filtered [pki/], got %v", ev.filtered)
+	}
+	if ev.table.RowCount() != 1 {
+		t.Errorf("expected 1 table row, got %d", ev.table.RowCount())
+	}
+	if sel := ev.SelectedEngine(); sel == nil || sel.Path != "pki/" {
+		t.Error("expected selected engine to come from the filtered set")
+	}
+}
+
+func TestEnginesView_Filter_SurvivesReload(t *testing.T) {
+	v := NewEnginesView(newTestClient(t))
+	v.Update(enginesLoadedMsg{engines: []vault.MountEntry{
+		{Path: "secret/", Type: "kv"},
+		{Path: "pki/", Type: "pki"},
+	}})
+	v.Update(runeKey("/"))
+	v.Update(runeKey("pk"))
+
+	updated, _ := v.Update(enginesLoadedMsg{engines: []vault.MountEntry{
+		{Path: "secret/", Type: "kv"},
+		{Path: "pki/", Type: "pki"},
+		{Path: "transit/", Type: "transit"},
+	}})
+	ev := updated.(*EnginesView)
+
+	if len(ev.filtered) != 1 || ev.filtered[0].Path != "pki/" {
+		t.Errorf("expected filter to survive reload, got %v", ev.filtered)
+	}
+}
+
+func TestEnginesView_Filter_NoMatches(t *testing.T) {
+	v := NewEnginesView(newTestClient(t))
+	v.Update(enginesLoadedMsg{engines: []vault.MountEntry{
+		{Path: "secret/", Type: "kv"},
+	}})
+	v.Update(runeKey("/"))
+	v.Update(runeKey("zzz"))
+
+	view := v.View(80, 20)
+	if !strings.Contains(view, "No matches") {
+		t.Error("expected no-matches message")
+	}
+}
+
+func TestEnginesView_ClearFilter(t *testing.T) {
+	v := NewEnginesView(newTestClient(t))
+	v.Update(enginesLoadedMsg{engines: []vault.MountEntry{
+		{Path: "secret/", Type: "kv"},
+		{Path: "pki/", Type: "pki"},
+	}})
+	v.Update(runeKey("/"))
+	v.Update(runeKey("pk"))
+
+	v.ClearFilter()
+
+	if v.HasFilter() || v.FilterActive() {
+		t.Error("expected ClearFilter to drop the filter")
+	}
+	if len(v.filtered) != 2 {
+		t.Errorf("expected all engines after ClearFilter, got %d", len(v.filtered))
+	}
+}
+
+func TestEnginesView_KeyHints_IncludeFilter(t *testing.T) {
+	v := NewEnginesView(newTestClient(t))
+
+	found := false
+	for _, h := range v.KeyHints() {
+		if h.Key == "/" && h.Desc == "filter" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected '/' filter hint")
+	}
+}
