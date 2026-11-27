@@ -29,6 +29,7 @@ Browse secrets, auth methods, policies, and more — without leaving your termin
 - **Context switching** — manage multiple Vault connections via `~/.vaultui.yaml`
 - **Multiple auth methods** — token, userpass, and AppRole authentication
 - **Command palette** — `:secrets`, `:auth`, `:policies`, `:pki`, `:transit`, `:identity`, `:ctx`
+- **Fuzzy row filter** — `/` narrows rows in the engines and path browser views, `Enter` commits, `Esc` clears
 - **Configurable keybindings** — override defaults via config file
 - **Clipboard with auto-clear** — copied secrets are cleared after 30 seconds
 - **Headless mode** — `vaultui get` subcommand for JSON output in scripts
@@ -149,6 +150,7 @@ vaultui get secret secret/apps/myapp/config | jq .db_host
 | `8`          | AWS                             |
 | `Tab`        | Switch tab (where applicable)   |
 | `:`          | Command palette                 |
+| `/`          | Filter rows (engines, paths)    |
 | `?`          | Show help overlay               |
 | `c`          | Copy selected value             |
 | `C`          | Copy secret as JSON             |
@@ -157,6 +159,14 @@ vaultui get secret secret/apps/myapp/config | jq .db_host
 | `v`          | Version history (KV v2 detail)  |
 | `d`          | Diff versions (version history) |
 | `q`          | Quit                            |
+
+## Filtering
+
+Press `/` in the Secret Engines or KV path browser view to narrow rows as you
+type. Matching is fuzzy and case-insensitive — `bnk` matches `bank`. Press
+`Enter` to keep the filter applied while you navigate, `Esc` to clear it.
+The filter survives refresh (`r`) and stays applied as you drill into paths
+and come back; `Esc` clears the filter first, then navigates back.
 
 ## Command Palette
 
