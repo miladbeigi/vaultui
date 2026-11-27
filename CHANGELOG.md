@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Fuzzy row filter (`/`) on the Secret Engines and KV path browser views: type to narrow rows, `Enter` commits, `Esc` clears
+
 ## [0.9.0] - 2026-10-06
 
 ### Added

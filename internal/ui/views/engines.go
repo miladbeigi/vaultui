@@ -18,14 +18,17 @@ type enginesLoadedMsg struct {
 
 // EnginesView displays the list of mounted secret engines.
 type EnginesView struct {
-	client  *vault.Client
-	table   *components.Table
-	engines []vault.MountEntry
-	err     error
-	loading bool
+	client   *vault.Client
+	table    *components.Table
+	engines  []vault.MountEntry
+	filtered []vault.MountEntry
+	filter   components.FilterBar
+	err      error
+	loading  bool
 }
 
 var _ ui.View = (*EnginesView)(nil)
+var _ ui.Filterable = (*EnginesView)(nil)
 
 func engineColumnsForData(engines []vault.MountEntry) []components.Column {
 	pathWidth := 20
@@ -68,10 +71,16 @@ func (v *EnginesView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		v.err = msg.err
 		v.engines = msg.engines
 		v.table = components.NewTable(engineColumnsForData(v.engines))
-		v.table.SetRows(v.buildRows())
+		v.applyFilter()
 		return v, nil
 
 	case tea.KeyMsg:
+		if v.filter.Active {
+			v.filter.Update(msg)
+			v.applyFilter()
+			return v, nil
+		}
+
 		switch {
 		case key.Matches(msg, navKeys.Up):
 			v.table.MoveUp()
@@ -88,6 +97,9 @@ func (v *EnginesView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 		case key.Matches(msg, navKeys.Enter):
 			cmd := v.handleEnter()
 			return v, cmd
+		case msg.String() == "/":
+			v.filter.Active = true
+			return v, nil
 		}
 
 		if msg.String() == "d" {
@@ -110,29 +122,40 @@ func (v *EnginesView) Update(msg tea.Msg) (ui.View, tea.Cmd) {
 const enginesTitleHeight = 2 // title + blank line
 
 func (v *EnginesView) View(width, height int) string {
-	v.table.SetSize(width, height-enginesTitleHeight)
+	filterHeight := 0
+	parts := []string{styles.ViewTitleStyle.Width(width).Render("Secret Engines")}
+	if v.filter.Active || v.filter.Text != "" {
+		parts = append(parts, v.filter.View(width))
+		filterHeight = components.FilterBarHeight
+	}
 
-	title := styles.ViewTitleStyle.Width(width).Render("Secret Engines")
+	v.table.SetSize(width, height-enginesTitleHeight-filterHeight)
 
 	if v.loading {
-		body := lipgloss.Place(width, height-enginesTitleHeight, lipgloss.Center, lipgloss.Center,
-			styles.SubtleStyle.Render("Loading secret engines..."))
-		return lipgloss.JoinVertical(lipgloss.Left, title, body)
+		parts = append(parts, lipgloss.Place(width, height-enginesTitleHeight-filterHeight, lipgloss.Center, lipgloss.Center,
+			styles.SubtleStyle.Render("Loading secret engines...")))
+		return lipgloss.JoinVertical(lipgloss.Left, parts...)
 	}
 
 	if v.err != nil {
-		body := lipgloss.Place(width, height-enginesTitleHeight, lipgloss.Center, lipgloss.Center,
-			styles.ErrorStyle.Render("Error: "+v.err.Error()))
-		return lipgloss.JoinVertical(lipgloss.Left, title, body)
+		parts = append(parts, lipgloss.Place(width, height-enginesTitleHeight-filterHeight, lipgloss.Center, lipgloss.Center,
+			styles.ErrorStyle.Render("Error: "+v.err.Error())))
+		return lipgloss.JoinVertical(lipgloss.Left, parts...)
 	}
 
 	if len(v.engines) == 0 {
-		body := lipgloss.Place(width, height-enginesTitleHeight, lipgloss.Center, lipgloss.Center,
-			styles.SubtleStyle.Render("No secret engines found"))
-		return lipgloss.JoinVertical(lipgloss.Left, title, body)
+		parts = append(parts, lipgloss.Place(width, height-enginesTitleHeight-filterHeight, lipgloss.Center, lipgloss.Center,
+			styles.SubtleStyle.Render("No secret engines found")))
+		return lipgloss.JoinVertical(lipgloss.Left, parts...)
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left, title, v.table.View())
+	if len(v.filtered) == 0 {
+		parts = append(parts, lipgloss.Place(width, height-enginesTitleHeight-filterHeight, lipgloss.Center, lipgloss.Center,
+			styles.SubtleStyle.Render("No matches for '"+v.filter.Text+"'")))
+		return lipgloss.JoinVertical(lipgloss.Left, parts...)
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, append(parts, v.table.View())...)
 }
 
 func (v *EnginesView) Title() string {
@@ -140,9 +163,16 @@ func (v *EnginesView) Title() string {
 }
 
 func (v *EnginesView) KeyHints() []ui.KeyHint {
+	if v.filter.Active {
+		return []ui.KeyHint{
+			{Key: "⏎", Desc: "apply filter"},
+			{Key: "esc", Desc: "clear filter"},
+		}
+	}
 	return []ui.KeyHint{
 		{Key: "↑↓", Desc: "navigate"},
 		{Key: "⏎", Desc: "browse"},
+		{Key: "/", Desc: "filter"},
 		{Key: "d", Desc: "describe"},
 		{Key: "J/y", Desc: "raw view"},
 		{Key: "esc", Desc: "back"},
@@ -201,15 +231,42 @@ func (v *EnginesView) handleDescribe() tea.Cmd {
 // SelectedEngine returns the currently highlighted engine, or nil.
 func (v *EnginesView) SelectedEngine() *vault.MountEntry {
 	idx := v.table.Cursor()
-	if idx < 0 || idx >= len(v.engines) {
+	if idx < 0 || idx >= len(v.filtered) {
 		return nil
 	}
-	return &v.engines[idx]
+	return &v.filtered[idx]
+}
+
+// FilterActive reports whether the filter input is capturing keys.
+func (v *EnginesView) FilterActive() bool {
+	return v.filter.Active
+}
+
+// HasFilter reports whether a filter is currently applied.
+func (v *EnginesView) HasFilter() bool {
+	return v.filter.Text != ""
+}
+
+// ClearFilter drops the applied filter and shows all engines.
+func (v *EnginesView) ClearFilter() {
+	v.filter.Text = ""
+	v.filter.Active = false
+	v.applyFilter()
+}
+
+// applyFilter rebuilds the filtered engines and table rows, resetting
+// the cursor to the top.
+func (v *EnginesView) applyFilter() {
+	v.filtered = components.Filter(v.engines, v.filter.Text, func(e vault.MountEntry) string {
+		return e.Path
+	})
+	v.table.SetRows(v.buildRows())
+	v.table.GoToTop()
 }
 
 func (v *EnginesView) buildRows() []components.Row {
-	rows := make([]components.Row, len(v.engines))
-	for i, e := range v.engines {
+	rows := make([]components.Row, len(v.filtered))
+	for i, e := range v.filtered {
 		rows[i] = components.Row{e.Path, e.Type, e.Version, e.Description}
 	}
 	return rows

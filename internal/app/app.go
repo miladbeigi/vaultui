@@ -130,6 +130,17 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleHelpKeyMsg(msg)
 	}
 
+	// While a view's filter input is active, every key goes to the view
+	// so typing q, digits, or ':' edits the filter instead of triggering
+	// global bindings.
+	if current := m.router.Current(); current != nil {
+		if f, ok := current.(ui.Filterable); ok && f.FilterActive() {
+			updated, cmd := current.Update(msg)
+			m.router.Replace(updated)
+			return m, cmd
+		}
+	}
+
 	switch {
 	case key.Matches(msg, keys.Quit), key.Matches(msg, keys.ForceQuit):
 		m.stopRenewer()
@@ -139,6 +150,13 @@ func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.helpActive = true
 		return m, nil
 	case key.Matches(msg, keys.Back):
+		// Clear an applied filter first; the next Back navigates.
+		if current := m.router.Current(); current != nil {
+			if f, ok := current.(ui.Filterable); ok && f.HasFilter() {
+				f.ClearFilter()
+				return m, nil
+			}
+		}
 		if m.router.Pop() {
 			return m, nil
 		}

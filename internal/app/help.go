@@ -11,7 +11,7 @@ func globalHelpSections() []components.HelpSection {
 	return []components.HelpSection{
 		{
 			Title: "General",
-			Hints: bindingsToHints(keys.Quit, keys.ForceQuit, keys.Help, keys.Command),
+			Hints: bindingsToHints(keys.Quit, keys.ForceQuit, keys.Help, keys.Command, keys.Filter),
 		},
 		{
 			Title: "Navigation",

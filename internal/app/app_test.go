@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/miladbeigi/vaultui/internal/ui"
 	"github.com/miladbeigi/vaultui/internal/ui/views"
 	"github.com/miladbeigi/vaultui/internal/vault"
 )
@@ -657,5 +658,76 @@ func TestHelpOverlay_EscDoesNotPopRouter(t *testing.T) {
 	}
 	if model.router.Depth() != 2 {
 		t.Errorf("expected Esc in help overlay not to pop router, depth=%d", model.router.Depth())
+	}
+}
+
+func TestUpdate_FilterInputCapturesKeys(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, nil, "")
+	_ = m.router.Push(views.NewPathBrowserView(client, "secret/", "", true))
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	model := updated.(Model)
+
+	f, ok := model.router.Current().(ui.Filterable)
+	if !ok || !f.FilterActive() {
+		t.Fatal("expected '/' to activate the filter input")
+	}
+
+	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
+	model = updated.(Model)
+
+	if model.quitting {
+		t.Error("expected 'q' to be typed into the filter, not quit the app")
+	}
+	f, ok = model.router.Current().(ui.Filterable)
+	if !ok || !f.HasFilter() {
+		t.Error("expected 'q' to be typed into the filter")
+	}
+}
+
+func TestUpdate_JumpKeyCapturedByFilter(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, nil, "")
+	_ = m.router.Push(views.NewPathBrowserView(client, "secret/", "", true))
+
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}})
+	model := updated.(Model)
+
+	if _, isEngines := model.router.Current().(*views.EnginesView); isEngines {
+		t.Error("expected '1' to be typed into the filter, not jump views")
+	}
+	f, ok := model.router.Current().(ui.Filterable)
+	if !ok || !f.HasFilter() {
+		t.Error("expected '1' to be typed into the filter")
+	}
+}
+
+func TestUpdate_BackKey_ClearsFilterBeforePopping(t *testing.T) {
+	client := newTestClient(t)
+	m := New(client, nil, "")
+	_ = m.router.Push(views.NewPathBrowserView(client, "secret/", "", true))
+
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}})
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'b'}})
+	m.Update(tea.KeyMsg{Type: tea.KeyEnter}) // commit the filter
+
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	model := updated.(Model)
+
+	if model.router.Depth() != 2 {
+		t.Fatalf("expected Esc to clear the filter without popping, depth=%d", model.router.Depth())
+	}
+	f, ok := model.router.Current().(ui.Filterable)
+	if !ok || f.HasFilter() {
+		t.Error("expected the filter to be cleared by Esc")
+	}
+
+	updated, _ = model.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	model = updated.(Model)
+	if model.router.Depth() != 1 {
+		t.Errorf("expected a second Esc to pop the view, depth=%d", model.router.Depth())
 	}
 }

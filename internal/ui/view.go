@@ -27,6 +27,19 @@ type KeyHint struct {
 	Desc string
 }
 
+// Filterable is optionally implemented by views that support row
+// filtering with `/`. While FilterActive reports true, the app routes
+// every key to the view instead of applying global bindings; Back
+// clears an applied filter before navigating.
+type Filterable interface {
+	// FilterActive reports whether the filter input is capturing keys.
+	FilterActive() bool
+	// HasFilter reports whether a filter is currently applied.
+	HasFilter() bool
+	// ClearFilter drops the applied filter and shows all rows.
+	ClearFilter()
+}
+
 // PushViewMsg is returned as a tea.Cmd by views that want to navigate
 // to a new view. The app model handles this by pushing onto the router.
 type PushViewMsg struct {
